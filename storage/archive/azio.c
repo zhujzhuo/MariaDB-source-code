@@ -367,6 +367,7 @@ void check_header(azio_stream *s)
 
 void read_header(azio_stream *s, unsigned char *buffer)
 {
+  s->frmver_length= 0;
   if (buffer[0] == az_magic[0]  && buffer[1] == az_magic[1])
   {
     uchar tmp[AZ_FRMVER_LEN + 2];
@@ -391,13 +392,9 @@ void read_header(azio_stream *s, unsigned char *buffer)
       we'll hard-code the current frm format for now, to avoid
       changing archive table versions.
     */
-    if (s->frm_length == 0 ||
-        my_pread(s->file, tmp,  sizeof(tmp), s->frm_start_pos + 64, MYF(MY_NABP)) ||
-        tmp[0] != 0 || tmp[1] != AZ_FRMVER_LEN)
-    {
-      s->frmver_length= 0;
-    }
-    else
+    if (s->frm_length > sizeof(tmp) + 64 &&
+        my_pread(s->file, tmp,  sizeof(tmp), s->frm_start_pos + 64, MYF(MY_NABP)) == 0 &&
+        tmp[0] == 0 && tmp[1] == AZ_FRMVER_LEN)
     {
       s->frmver_length= tmp[1];
       memcpy(s->frmver, tmp+2, s->frmver_length);
