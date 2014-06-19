@@ -914,6 +914,12 @@ static void print_lock_error(int error, TABLE *table)
     my_error(ER_ILLEGAL_HA, MYF(0), table->file->table_type(),
              table->s->db.str, table->s->table_name.str);
     DBUG_VOID_RETURN;
+  case HA_ERR_TABLE_DEF_CHANGED:
+    textno=ER_TABLE_DEF_CHANGED;
+    break;
+  case HA_ERR_CRASHED_ON_USAGE:
+    my_error(ER_CRASHED_ON_USAGE, MYF(0), table->s->table_name.str);
+    DBUG_VOID_RETURN;
   default:
     textno=ER_CANT_LOCK;
     break;
