@@ -59,7 +59,7 @@ public:
     thr_lock_delete(&lock);
     mysql_mutex_destroy(&mutex);
   }
-  int init_archive_writer();
+  int init_archive_writer(TABLE *table);
   void close_archive_writer();
   int write_v1_metafile();
   int read_v1_metafile();
@@ -94,7 +94,6 @@ class ha_archive: public handler
   archive_record_buffer *create_record_buffer(unsigned int length);
   void destroy_record_buffer(archive_record_buffer *r);
   int frm_copy(azio_stream *src, azio_stream *dst);
-  int frm_compare(azio_stream *src);
   unsigned int pack_row_v1(uchar *record);
 
 public:
@@ -115,19 +114,20 @@ public:
   {
     return HA_ONLY_WHOLE_INDEX;
   }
-  virtual void get_auto_increment(ulonglong offset, ulonglong increment,
-                                  ulonglong nb_desired_values,
-                                  ulonglong *first_value,
-                                  ulonglong *nb_reserved_values);
+  void get_auto_increment(ulonglong offset, ulonglong increment,
+                          ulonglong nb_desired_values,
+                          ulonglong *first_value,
+                          ulonglong *nb_reserved_values);
   uint max_supported_keys()          const { return 1; }
   uint max_supported_key_length()    const { return sizeof(ulonglong); }
   uint max_supported_key_part_length() const { return sizeof(ulonglong); }
   ha_rows records() { return share->rows_recorded; }
+  int external_lock(THD* thd, int lock_type);
   int index_init(uint keynr, bool sorted);
-  virtual int index_read(uchar * buf, const uchar * key,
-			 uint key_len, enum ha_rkey_function find_flag);
-  virtual int index_read_idx(uchar * buf, uint index, const uchar * key,
-			     uint key_len, enum ha_rkey_function find_flag);
+  int index_read(uchar * buf, const uchar * key, uint key_len,
+                 enum ha_rkey_function find_flag);
+  int index_read_idx(uchar * buf, uint index, const uchar * key,
+                     uint key_len, enum ha_rkey_function find_flag);
   int index_next(uchar * buf);
   int open(const char *name, int mode, uint test_if_locked);
   int close(void);

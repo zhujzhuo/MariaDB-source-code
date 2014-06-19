@@ -133,6 +133,8 @@ static handler *archive_create_handler(handlerton *hton,
                                        MEM_ROOT *mem_root);
 int archive_discover(handlerton *hton, THD* thd, TABLE_SHARE *share);
 
+static int frm_compare(azio_stream *s, TABLE *table);
+
 /*
   Number of rows that will force a bulk insert.
 */
@@ -490,7 +492,7 @@ Archive_share *ha_archive::get_share(const char *table_name, int *rc)
     share= tmp_share;
     if (archive_tmp.version == 1)
       share->read_v1_metafile();
-    else if (frm_compare(&archive_tmp))
+    else if (frm_compare(&archive_tmp, table))
       *rc= HA_ERR_TABLE_DEF_CHANGED;
 
     azclose(&archive_tmp);
@@ -508,7 +510,7 @@ err:
 }
 
 
-int Archive_share::init_archive_writer()
+int Archive_share::init_archive_writer(TABLE *table)
 {
   DBUG_ENTER("Archive_share::init_archive_writer");
   /*
@@ -516,11 +518,16 @@ int Archive_share::init_archive_writer()
     a gzip file that can be both read and written we keep a writer open
     that is shared amoung all open tables.
   */
-  if (!(azopen(&archive_write, data_file_name,
-               O_RDWR|O_BINARY)))
+  if (!(azopen(&archive_write, data_file_name, O_RDWR|O_BINARY)))
   {
     DBUG_PRINT("ha_archive", ("Could not open archive write file"));
     crashed= true;
+    DBUG_RETURN(1);
+  }
+  if (frm_compare(&archive_write, table))
+  {
+    azclose(&archive_write);
+    errno= HA_ERR_TABLE_DEF_CHANGED;
     DBUG_RETURN(1);
   }
   archive_write_open= true;
@@ -563,7 +570,7 @@ int ha_archive::init_archive_reader()
       share->crashed= TRUE;
       DBUG_RETURN(1);
     }
-    if (frm_compare(&archive))
+    if (frm_compare(&archive, table))
     {
       azclose(&archive);
       errno= HA_ERR_TABLE_DEF_CHANGED;
@@ -666,6 +673,37 @@ int ha_archive::close(void)
 }
 
 
+int ha_archive::external_lock(THD* thd, int lock_type)
+{
+  int rc= 0;
+  DBUG_ENTER("ha_archive::external_lock");
+
+  if (share->crashed)
+    DBUG_RETURN(HA_ERR_CRASHED_ON_USAGE);
+
+  switch (lock_type)
+  {
+  case F_RDLCK:
+    if (!archive_reader_open && init_archive_reader())
+      rc= errno ? errno : HA_ERR_CRASHED_ON_USAGE;
+    break;
+  case F_WRLCK:
+    mysql_mutex_lock(&share->mutex);
+    if (!share->archive_write_open && share->init_archive_writer(table))
+      rc= errno ? errno : HA_ERR_CRASHED_ON_USAGE;
+    mysql_mutex_unlock(&share->mutex);
+    break;
+  case F_UNLCK:
+    break;
+  default:
+    DBUG_ASSERT(0);
+    rc= HA_ERR_WRONG_COMMAND;
+  }
+
+  DBUG_RETURN(rc);
+}
+
+
 /**
   Copy a frm blob between streams.
 
@@ -714,7 +752,7 @@ int ha_archive::frm_copy(azio_stream *src, azio_stream *dst)
   @return Zero if equal, non-zero otherwise.
 */
 
-int ha_archive::frm_compare(azio_stream *s)
+static int frm_compare(azio_stream *s, TABLE *table)
 {
   if (!s->frmver_length)
     return 0; // Old pre-10.0 archive table. Never rediscover.
@@ -959,14 +997,9 @@ int ha_archive::write_row(uchar *buf)
 
   if (!share->archive_write_open)
   {
-    if (share->init_archive_writer())
+    if (share->init_archive_writer(table))
     {
       rc= errno;
-      goto error;
-    }
-    else if (frm_compare(&share->archive_write))
-    {
-      rc= HA_ERR_TABLE_DEF_CHANGED;
       goto error;
     }
   }

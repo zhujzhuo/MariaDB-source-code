@@ -9,7 +9,7 @@
 create table t1 (a int) engine=archive;
 insert into t1 values (1);
 --remove_file $datadir/test/t1.ARZ
---error 13,1017
+--error ER_CANT_LOCK
 select * from t1;
 --error ER_CRASHED_ON_USAGE
 insert into t1 values (2);

@@ -146,7 +146,7 @@ remove_file $mysqld_datadir/test/t1.ARZ;
 copy_file $MYSQL_TMP_DIR/t1.ARZ $mysqld_datadir/test/t1.ARZ;
 remove_file $MYSQL_TMP_DIR/t1.ARZ;
 show create table t1;
---error 1412
+--error ER_TABLE_DEF_CHANGED
 select * from t1, t1 as t2;
 flush tables;
 select * from t1, t1 as t2;
