@@ -139,3 +139,22 @@ flush tables;
 create table t1 (a int) engine=archive;
 ERROR 42S01: Table 't1' already exists
 drop table t1;
+create table t1 (a int) engine=archive;
+insert t1 values (1);
+flush tables;
+alter table t1 modify a int default 5;
+select * from t1;
+a
+1
+show create table t1;
+Table	Create Table
+t1	CREATE TABLE `t1` (
+  `a` int(11) DEFAULT '5'
+) ENGINE=ARCHIVE DEFAULT CHARSET=latin1
+select * from t1, t1 as t2;
+ERROR HY000: Table definition has changed, please retry transaction
+flush tables;
+select * from t1, t1 as t2;
+a	a
+1	1
+drop table t1;

@@ -563,6 +563,12 @@ int ha_archive::init_archive_reader()
       share->crashed= TRUE;
       DBUG_RETURN(1);
     }
+    if (frm_compare(&archive))
+    {
+      azclose(&archive);
+      errno= HA_ERR_TABLE_DEF_CHANGED;
+      DBUG_RETURN(1);
+    }
     archive_reader_open= TRUE;
   }
 
@@ -951,10 +957,18 @@ int ha_archive::write_row(uchar *buf)
 
   mysql_mutex_lock(&share->mutex);
 
-  if (!share->archive_write_open && share->init_archive_writer())
+  if (!share->archive_write_open)
   {
-    rc= errno;
-    goto error;
+    if (share->init_archive_writer())
+    {
+      rc= errno;
+      goto error;
+    }
+    else if (frm_compare(&share->archive_write))
+    {
+      rc= HA_ERR_TABLE_DEF_CHANGED;
+      goto error;
+    }
   }
 
   if (table->next_number_field && record == table->record[0])
