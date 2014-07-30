@@ -1,7 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 2000, 2012, Oracle and/or its affiliates. All Rights Reserved.
-Copyright (c) 2013, SkySQL Ab. All Rights Reserved.
+Copyright (c) 2013, 2014, SkySQL Ab. All Rights Reserved.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -207,6 +207,8 @@ class ha_innobase: public handler
 	int truncate();
 	int delete_table(const char *name);
 	int rename_table(const char* from, const char* to);
+	int defragment_table(const char* name, const char* index_name,
+						bool async);
 	int check(THD* thd, HA_CHECK_OPT* check_opt);
 	char* update_table_comment(const char* comment);
 	char* get_foreign_key_create_info();

@@ -69,6 +69,7 @@ Created 2/16/1996 Heikki Tuuri
 #include "srv0start.h"
 #include "srv0srv.h"
 #include "buf0flu.h"
+#include "btr0defragment.h"
 
 #ifndef UNIV_HOTBACKUP
 # include "trx0rseg.h"
@@ -2959,6 +2960,9 @@ files_checked:
 		/* Create the thread that will optimize the FTS sub-system. */
 		fts_optimize_init();
 	}
+
+	/* Initialize online defragmentation. */
+	btr_defragment_init();
 
 	srv_was_started = TRUE;
 
