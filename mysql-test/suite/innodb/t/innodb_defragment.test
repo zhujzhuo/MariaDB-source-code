@@ -29,7 +29,7 @@ begin
   repeat
     set @i = @i + 1;
     optimize table t1;
-    select sleep(0.5);
+    select sleep(5);
   until @i = 3 end repeat;
 end //
 delimiter ;//
@@ -124,7 +124,10 @@ select count(*) from t1;
 
 # This time we used innodb_defragment_n_pages = 10, so we should be able to free up some pages.
 select count(*) < 150 from information_schema.innodb_buffer_page where table_name like '%t1%' and index_name = 'PRIMARY' order by page_number;
-select count(*) < 140 from information_schema.innodb_buffer_page where table_name like '%t1%' and index_name = 'second' order by page_number;
+if (!`select count(*) < 160 from information_schema.innodb_buffer_page where table_name like '%t1%' and index_name = 'second' order by page_number;`)
+{
+select count(*) from information_schema.innodb_buffer_page where table_name like '%t1%' and index_name = 'second' order by page_number;
+}
 select count(*) from t1 force index (second);
 
 DROP PROCEDURE defragment;

@@ -34,7 +34,7 @@ Modified 30/07/2014 Jan Lindström jan.lindstrom@skysql.com
 #include "ibuf0ibuf.h"
 #include "lock0lock.h"
 #include "srv0start.h"
-#include <my_rdtsc.h>
+#include "ut0timer.h"
 
 #include <list>
 
@@ -98,10 +98,8 @@ Initialize defragmentation. */
 void
 btr_defragment_init()
 {
-	srv_defragment_interval = 40000;
-
-	//microseconds_to_my_timer(
-	//	1000000.0 / srv_defragment_frequency);
+	ut_microseconds_to_timer(
+		1000000.0 / srv_defragment_frequency);
 	mutex_create(btr_defragment_mutex_key, &btr_defragment_mutex,
 		     SYNC_ANY_LATCH);
 	os_thread_create(btr_defragment_thread, NULL, NULL);
@@ -684,9 +682,6 @@ DECLARE_THREAD(btr_defragment_thread)(
 	mtr_t		mtr;
 	buf_block_t*	first_block;
 	buf_block_t*	last_block;
-	MY_TIMER_INFO   mytr;
-
-	my_timer_init(&mytr);
 
 	while (srv_shutdown_state == SRV_SHUTDOWN_NONE) {
 		/* If defragmentation is disabled, sleep before
@@ -714,9 +709,11 @@ DECLARE_THREAD(btr_defragment_thread)(
 			btr_defragment_remove_item(item);
 			continue;
 		}
+
 		pcur = item->pcur;
-		ulonglong now = my_timer_microseconds();
+		ulonglong now = ut_timer_now();
 		ulonglong elapsed = now - item->last_processed;
+
 		if (elapsed < srv_defragment_interval) {
 			/* If we see an index again before the interval
 			determined by the configured frequency is reached,
@@ -724,9 +721,11 @@ DECLARE_THREAD(btr_defragment_thread)(
 			defragmentation of all indices queue up on a single
 			thread, it's likely other indices that follow this one
 			don't need to sleep again. */
-			os_thread_sleep(40000);
+			os_thread_sleep(((ulint)ut_timer_to_microseconds(
+						srv_defragment_interval - elapsed)));
 		}
-		now = my_timer_microseconds();
+
+		now = ut_timer_now();
 		mtr_start(&mtr);
 		btr_pcur_restore_position(BTR_MODIFY_TREE, pcur, &mtr);
 		cursor = btr_pcur_get_btr_cur(pcur);

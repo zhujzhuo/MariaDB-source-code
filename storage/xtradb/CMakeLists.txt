@@ -406,7 +406,8 @@ SET(INNOBASE_SOURCES
 	ut/ut0rnd.cc
 	ut/ut0ut.cc
 	ut/ut0vec.cc
-	ut/ut0wqueue.cc)
+	ut/ut0wqueue.cc
+	ut/ut0timer.cc)
 
 IF(NOT XTRADB_OK)
   MESSAGE(FATAL_ERROR "Percona XtraDB is not supported on this platform")

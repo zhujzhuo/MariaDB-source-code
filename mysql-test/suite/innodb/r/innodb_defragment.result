@@ -16,7 +16,7 @@ set @i = 0;
 repeat
 set @i = @i + 1;
 optimize table t1;
-select sleep(0.5);
+select sleep(5);
 until @i = 3 end repeat;
 end //
 call defragment();
@@ -61,9 +61,6 @@ count(*)
 select count(*) < 150 from information_schema.innodb_buffer_page where table_name like '%t1%' and index_name = 'PRIMARY' order by page_number;
 count(*) < 150
 0
-select count(*) < 140 from information_schema.innodb_buffer_page where table_name like '%t1%' and index_name = 'second' order by page_number;
-count(*) < 140
-1
 select count(*) from t1 force index (second);
 count(*)
 6904

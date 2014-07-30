@@ -43,6 +43,7 @@ Created 2/16/1996 Heikki Tuuri
 #include "pars0pars.h"
 #include "row0ftsort.h"
 #include "ut0mem.h"
+#include "ut0timer.h"
 #include "mem0mem.h"
 #include "data0data.h"
 #include "data0type.h"
@@ -1532,6 +1533,9 @@ innobase_start_or_create_for_mysql(void)
 	char		logfilename[10000];
 	char*		logfile0	= NULL;
 	size_t		dirnamelen;
+
+	/* This should be initialized early */
+	ut_init_timer();
 
 	if (srv_force_recovery > SRV_FORCE_NO_TRX_UNDO) {
 		srv_read_only_mode = true;

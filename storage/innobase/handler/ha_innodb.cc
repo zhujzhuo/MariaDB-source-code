@@ -43,7 +43,6 @@ this program; if not, write to the Free Software Foundation, Inc.,
 #include <innodb_priv.h>
 #include <table_cache.h>
 #include <my_check_opt.h>
-#include <my_rdtsc.h>
 
 #ifdef _WIN32
 #include <io.h>
@@ -87,6 +86,7 @@ this program; if not, write to the Free Software Foundation, Inc.,
 #include "dict0stats_bg.h"
 #include "ha_prototypes.h"
 #include "ut0mem.h"
+#include "ut0timer.h"
 #include "ibuf0ibuf.h"
 #include "dict0dict.h"
 #include "srv0mon.h"
@@ -15872,17 +15872,9 @@ innodb_defragment_frequency_update(
 	const void* save) /*!< in: immediate result
 	          from check function */
 {
-	MY_TIMER_INFO mti;
-	double ret;
-
 	srv_defragment_frequency = (*static_cast<const uint*>(save));
-
-	my_timer_init(&mti);
-	ret = (1000000.0 / srv_defragment_frequency);
-	ret *= (double)(mti.microseconds.frequency);
-        ret /= 1000000.0;
-
-	srv_defragment_interval = (ulonglong)ret;
+	srv_defragment_interval = ut_microseconds_to_timer(
+		1000000.0 / srv_defragment_frequency);
 }
 
 /****************************************************************//**

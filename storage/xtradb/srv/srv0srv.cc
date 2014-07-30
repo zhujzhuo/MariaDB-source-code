@@ -71,10 +71,10 @@ Created 10/8/1995 Heikki Tuuri
 #include "ut0crc32.h"
 #include "os0file.h"
 #include "btr0defragment.h"
-
 #include "mysql/plugin.h"
 #include "mysql/service_thd_wait.h"
 #include "fil0pagecompress.h"
+#include <my_rdtsc.h>
 
 /* prototypes of new functions added to ha_innodb.cc for kill_idle_transaction */
 ibool		innobase_thd_is_idle(const void* thd);

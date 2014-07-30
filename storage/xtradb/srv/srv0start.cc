@@ -70,6 +70,7 @@ Created 2/16/1996 Heikki Tuuri
 #include "srv0srv.h"
 #include "buf0flu.h"
 #include "btr0defragment.h"
+#include "ut0timer.h"
 
 #ifndef UNIV_HOTBACKUP
 # include "trx0rseg.h"
@@ -1575,6 +1576,9 @@ innobase_start_or_create_for_mysql(void)
 	char		logfilename[10000];
 	char*		logfile0	= NULL;
 	size_t		dirnamelen;
+
+	/* This should be initialized early */
+	ut_init_timer();
 
 	if (srv_force_recovery > SRV_FORCE_NO_TRX_UNDO) {
 		srv_read_only_mode = true;
