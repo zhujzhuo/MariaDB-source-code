@@ -1,4 +1,4 @@
---source include/have_xtradb.inc
+--source include/have_innodb.inc
 
 SET @start_innodb_defragment_stats_accuracy = @@global.innodb_defragment_stats_accuracy;
 SELECT @start_innodb_defragment_stats_accuracy;

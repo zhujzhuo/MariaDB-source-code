@@ -1,4 +1,4 @@
---source include/have_xtradb.inc
+--source include/have_innodb.inc
 --source include/big_test.inc
 
 --disable_warnings

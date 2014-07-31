@@ -1,7 +1,7 @@
 SET @start_innodb_defragment_frequency = @@global.innodb_defragment_frequency;
 SELECT @start_innodb_defragment_frequency;
 @start_innodb_defragment_frequency
-100
+40
 SELECT COUNT(@@global.innodb_defragment_frequency);
 COUNT(@@global.innodb_defragment_frequency)
 1

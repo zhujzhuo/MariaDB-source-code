@@ -1,4 +1,4 @@
---source include/have_xtradb.inc
+--source include/have_innodb.inc
 --disable_warnings
 DROP TABLE if exists t1;
 DROP TABLE if exists t2;
@@ -25,7 +25,7 @@ while ($size)
     dec $size;
 }
 --enable_query_log
-alter table t1 defragment;
+optimize table t1;
 --source include/restart_mysqld.inc
 select count(*) from t1;
 # After deletion & defragmentation, there are 800 records left. Each page can hold about 57 records. We fill the page 90% full,
@@ -49,9 +49,10 @@ if ($second_before != $second_after) {
    --echo Insertion caused page split on second, which should be avoided by innodb_defragment_fill_factor.
 }
 --echo # More insertions will cause page splits
-insert into t1 values (88, REPEAT('A', 256));
-insert into t1 values (85, REPEAT('A', 256));
-insert into t1 values (84, REPEAT('A', 256));
+insert into t1 values (88, REPEAT('A', 50));
+#insert into t1 values (85, REPEAT('A', 256));
+#insert into t1 values (84, REPEAT('A', 256));
+#insert into t1 values (89, REPEAT('A', 256));
 --let $primary_after = query_get_value(select count(*) as Value from information_schema.innodb_buffer_page where table_name like '%t1%' and index_name = 'PRIMARY', Value, 1)
 --let $second_after = query_get_value(select count(*) as Value from information_schema.innodb_buffer_page where table_name like '%t1%' and index_name = 'second', Value, 1)
 if ($primary_before == $primary_after) {
@@ -88,7 +89,7 @@ while ($size)
     dec $size;
 }
 --enable_query_log
-alter table t2 defragment;
+optimize table t2;
 --source include/restart_mysqld.inc
 select count(*) from t2 force index(second);
 --let $second_before = query_get_value(select count(*) as Value from information_schema.innodb_buffer_page where table_name like '%t2%' and index_name = 'second', Value, 1)

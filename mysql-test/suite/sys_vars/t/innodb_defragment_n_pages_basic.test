@@ -1,4 +1,4 @@
---source include/have_xtradb.inc
+--source include/have_innodb.inc
 
 SET @start_innodb_defragment_n_pages = @@global.innodb_defragment_n_pages;
 SELECT @start_innodb_defragment_n_pages;

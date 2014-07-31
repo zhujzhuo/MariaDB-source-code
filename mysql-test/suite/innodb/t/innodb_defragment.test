@@ -1,4 +1,4 @@
---source include/have_xtradb.inc
+--source include/have_innodb.inc
 
 --disable_warnings
 DROP TABLE if exists t1;
@@ -82,7 +82,10 @@ select count(*) < 145 from information_schema.innodb_buffer_page where table_nam
 select count(*) from t1 force index (second);
 
 # secondary index is pretty much the same size as primary index so the number of pages should be similar.
-select count(*) < 145 from information_schema.innodb_buffer_page where table_name like '%t1%' and index_name = 'second' order by page_number;
+if (!`select count(*) < 170 from information_schema.innodb_buffer_page where table_name like '%t1%' and index_name = 'second' order by page_number;`)
+{
+select count(*) from information_schema.innodb_buffer_page where table_name like '%t1%' and index_name = 'second' order by page_number;
+}
 
 ## Test-4 defragment with larger n_pages
 
@@ -123,7 +126,11 @@ optimize table t1;
 select count(*) from t1;
 
 # This time we used innodb_defragment_n_pages = 10, so we should be able to free up some pages.
-select count(*) < 150 from information_schema.innodb_buffer_page where table_name like '%t1%' and index_name = 'PRIMARY' order by page_number;
+if (!`select count(*) < 160 from information_schema.innodb_buffer_page where table_name like '%t1%' and index_name = 'PRIMARY' order by page_number;`)
+{
+select count(*) from information_schema.innodb_buffer_page where table_name like '%t1%' and index_name = 'PRIMARY' order by page_number;
+}
+
 if (!`select count(*) < 160 from information_schema.innodb_buffer_page where table_name like '%t1%' and index_name = 'second' order by page_number;`)
 {
 select count(*) from information_schema.innodb_buffer_page where table_name like '%t1%' and index_name = 'second' order by page_number;

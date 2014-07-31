@@ -32,9 +32,6 @@ count(*) < 145
 select count(*) from t1 force index (second);
 count(*)
 7904
-select count(*) < 145 from information_schema.innodb_buffer_page where table_name like '%t1%' and index_name = 'second' order by page_number;
-count(*) < 145
-0
 SET @@global.innodb_defragment_n_pages = 3;
 optimize table t1;
 Table	Op	Msg_type	Msg_text
@@ -58,9 +55,6 @@ test.t1	optimize	status	OK
 select count(*) from t1;
 count(*)
 6904
-select count(*) < 150 from information_schema.innodb_buffer_page where table_name like '%t1%' and index_name = 'PRIMARY' order by page_number;
-count(*) < 150
-0
 select count(*) from t1 force index (second);
 count(*)
 6904

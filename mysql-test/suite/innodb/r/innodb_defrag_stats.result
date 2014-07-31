@@ -56,13 +56,21 @@ test.t1	optimize	status	OK
 # n_page_split should be 0 after defragmentation, n_pages_freed should be non-zero.
 select stat_value = 0 from mysql.innodb_index_stats where table_name like '%t1%' and  stat_name = 'n_page_split';
 stat_value = 0
+1
+1
 select stat_value > 0 from mysql.innodb_index_stats where table_name like '%t1%' and  stat_name in ('n_pages_freed', 'n_leaf_pages_defrag');
 stat_value > 0
+1
+1
+1
+1
 set global innodb_defragment_stats_accuracy = 40;
 INSERT INTO t1 (b) SELECT b from t1;
 # Not enough operation to trigger persistent stats write
 select stat_value = 0 from mysql.innodb_index_stats where table_name like '%t1%' and  stat_name = 'n_page_split';
 stat_value = 0
+1
+1
 INSERT INTO t1 (b) SELECT b from t1;
 # Persistent stats write triggered
 select stat_value > 0 from mysql.innodb_index_stats where table_name like '%t1%' and  stat_name = 'n_page_split';

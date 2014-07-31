@@ -1,4 +1,4 @@
--- source include/have_xtradb.inc
+-- source include/have_innodb.inc
 
 # Check the default value
 SET @orig = @@global.innodb_defragment;
