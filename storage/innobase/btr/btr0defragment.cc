@@ -21,6 +21,7 @@ this program; if not, write to the Free Software Foundation, Inc.,
 Index defragmentation.
 
 Created  05/29/2014 Rongrong Zhong
+Modified 16/07/2014 Sunguck Lee
 Modified 30/07/2014 Jan Lindström jan.lindstrom@skysql.com
 *******************************************************/
 
@@ -37,6 +38,54 @@ Modified 30/07/2014 Jan Lindström jan.lindstrom@skysql.com
 #include "ut0timer.h"
 
 #include <list>
+
+/**************************************************//**
+Custom nullptr implementation for under g++ 4.6
+*******************************************************/
+// #pragma once
+namespace std
+{
+ // based on SC22/WG21/N2431 = J16/07-0301
+ struct nullptr_t
+ {
+ template<typename any> operator any * () const
+ {
+ return 0;
+ }
+ template<class any, typename T> operator T any:: * () const
+ {
+ return 0;
+ }
+
+#ifdef _MSC_VER
+ struct pad {};
+ pad __[sizeof(void*)/sizeof(pad)];
+#else
+ char __[sizeof(void*)];
+#endif
+private:
+ // nullptr_t();// {}
+ // nullptr_t(const nullptr_t&);
+ // void operator = (const nullptr_t&);
+ void operator &() const;
+ template<typename any> void operator +(any) const
+ {
+ /*I Love MSVC 2005!*/
+ }
+ template<typename any> void operator -(any) const
+ {
+ /*I Love MSVC 2005!*/
+ }
+ };
+static const nullptr_t __nullptr = {};
+}
+
+#ifndef nullptr
+#define nullptr std::__nullptr
+#endif
+/**************************************************//**
+End of Custom nullptr implementation for under g++ 4.6
+*******************************************************/
 
 /* When there's no work, either because defragment is disabled, or because no
 query is submitted, thread checks state every BTR_DEFRAGMENT_SLEEP_IN_USECS.*/
@@ -274,7 +323,7 @@ btr_defragment_item_t*
 btr_defragment_get_item()
 {
 	if (btr_defragment_wq.empty()) {
-		return NULL;
+		return nullptr;
 	}
 	mutex_enter(&btr_defragment_mutex);
 	list< btr_defragment_item_t* >::iterator iter = btr_defragment_wq.begin();

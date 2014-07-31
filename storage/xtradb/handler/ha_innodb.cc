@@ -12462,7 +12462,7 @@ ha_innobase::optimize(
 	if (srv_defragment) {
 		int err;
 
-		err = defragment_table(prebuilt->table->name, NULL, true);
+		err = defragment_table(prebuilt->table->name, NULL, false);
 
 		if (err == 0) {
 			return (HA_ADMIN_OK);
