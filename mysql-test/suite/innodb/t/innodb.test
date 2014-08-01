@@ -106,7 +106,7 @@ explain select level,id from t1 where level=1;
 explain select level,id,parent_id from t1 where level=1;
 select level,id from t1 where level=1;
 select level,id,parent_id from t1 where level=1;
-optimize table t1;
+alter table t1 engine=innodb;
 --replace_column 7 #
 show keys from t1;
 drop table t1;
@@ -133,7 +133,7 @@ drop table t1;
 
 create table t1 (a int) engine=innodb;
 insert into t1 values (1), (2);
-optimize table t1;
+alter table t1 engine=innodb;
 delete from t1 where a = 1;
 select * from t1;
 check table t1;
@@ -471,7 +471,7 @@ drop table t1;
 create table t1 (a varchar(100) not null, primary key(a), b int not null) engine=innodb;
 insert into t1 values("hello",1),("world",2);
 select * from t1 order by b desc;
-optimize table t1;
+alter table t1 engine=innodb;
 --replace_column 7 #
 show keys from t1;
 drop table t1;
@@ -936,7 +936,7 @@ drop table t1;
 #
 # Test that MySQL priorities clustered indexes
 #
-create table t1 (a int not null auto_increment primary key, b int, c int, key(c)) engine=innodb;
+create table t1 (a int not null auto_increment primary key, b int, c int, key c (c)) engine=innodb;
 create table t2 (a int not null auto_increment primary key, b int);
 insert into t1 (b) values (null),(null),(null),(null),(null),(null),(null);
 insert into t2 (a) select b from t1;
@@ -950,11 +950,10 @@ insert into t1 (a) select b from t2;
 insert into t2 (a) select b from t1;
 insert into t1 (a) select b from t2;
 select count(*) from t1;
---replace_column 9 # 10 #
-explain select * from t1 where c between 1 and 2500;
+select * from t1 where c between 1 and 2500;
 update t1 set c=a;
---replace_column 9 # 10 #
-explain select * from t1 where c between 1 and 2500;
+alter table t1 engine=innodb;
+select * from t1 where c between 1 and 2500;
 drop table t1,t2;
 
 #
@@ -2270,7 +2269,7 @@ drop table t2, t1;
 CREATE TABLE t1 ( a int ) ENGINE=innodb;
 BEGIN;
 INSERT INTO t1 VALUES (1);
-OPTIMIZE TABLE t1;
+ALTER TABLE t1 ENGINE=innodb;
 DROP TABLE t1;
 
 #
