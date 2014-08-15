@@ -15,11 +15,13 @@ select 1;
 disconnect con1;
 connection default;
 set global debug_dbug='+d,simulate_failed_connection_1';
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
 --error 2013
 connect(con1,localhost,root,,test,,);
 connection default;
 set global debug_dbug=@old_debug;
 set global debug_dbug='+d,simulate_failed_connection_2';
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
 --error 2013
 connect(con1,localhost,root,,test,,);
 connection default;
@@ -35,11 +37,13 @@ select 1;
 disconnect con1;
 connection default;
 set global debug_dbug='+d,simulate_failed_connection_1';
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_EXTRA_PORT MASTER_PORT
 --error 2013
 connect(con1,localhost,root,,test,$MASTER_EXTRA_PORT,);
 connection default;
 set global debug_dbug=@old_debug;
 set global debug_dbug='+d,simulate_failed_connection_2';
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_EXTRA_PORT MASTER_PORT
 --error 2013
 connect(con1,localhost,root,,test,$MASTER_EXTRA_PORT,);
 connection default;
@@ -61,9 +65,13 @@ disconnect con1;
 disconnect con2;
 connection default;
 set global debug_dbug='+d,simulate_failed_connection_2';
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_EXTRA_PORT MASTER_PORT
 --error 2013
 connect(con1,localhost,root,,test,$MASTER_EXTRA_PORT,);
 connection default;
+
+# Check that threads_connected didn't count aborted connections
+show status like "Threads_connected";
 
 #
 # Cleanup

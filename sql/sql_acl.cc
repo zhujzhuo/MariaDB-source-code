@@ -211,9 +211,6 @@ static char *safe_str(char *str)
 static const char *safe_str(const char *str)
 { return str ? str : ""; }
 
-static size_t safe_strlen(const char *str)
-{ return str ? strlen(str) : 0; }
-
 /* Classes */
 
 struct acl_host_and_ip
@@ -635,6 +632,9 @@ static uchar* acl_role_map_get_key(ROLE_GRANT_PAIR *entry, size_t *length,
   *length=(uint) entry->hashkey.length;
   return (uchar*) entry->hashkey.str;
 }
+
+static size_t safe_strlen(const char *str)
+{ return str ? strlen(str) : 0; }
 
 bool ROLE_GRANT_PAIR::init(MEM_ROOT *mem, char *username,
                            char *hostname, char *rolename,

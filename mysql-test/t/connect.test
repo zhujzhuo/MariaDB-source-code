@@ -451,4 +451,3 @@ end loop foo|
 delimiter ;|
 call p1(2);
 drop procedure p1;
-
