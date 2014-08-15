@@ -1,0 +1,42 @@
+SET @old_debug= @@session.debug;
+set @old_thread_cache_size=@@global.thread_cache_size;
+select 1;
+1
+1
+set global debug_dbug='+d,simulate_failed_connection_1';
+connect(localhost,root,,test,16000,/my/maria-10.1/mysql-test/var/tmp/mysqld.1.sock);
+ERROR HY000: Lost connection to MySQL server at 'reading initial communication packet', system error: 95 "Operation not supported"
+set global debug_dbug=@old_debug;
+set global debug_dbug='+d,simulate_failed_connection_2';
+connect(localhost,root,,test,16000,/my/maria-10.1/mysql-test/var/tmp/mysqld.1.sock);
+ERROR HY000: Lost connection to MySQL server at 'reading initial communication packet', system error: 95 "Operation not supported"
+set global debug_dbug=@old_debug;
+select 1;
+1
+1
+select 1;
+1
+1
+set global debug_dbug='+d,simulate_failed_connection_1';
+connect(localhost,root,,test,16001,/my/maria-10.1/mysql-test/var/tmp/mysqld.1.sock);
+ERROR HY000: Lost connection to MySQL server at 'reading initial communication packet', system error: 95 "Operation not supported"
+set global debug_dbug=@old_debug;
+set global debug_dbug='+d,simulate_failed_connection_2';
+connect(localhost,root,,test,16001,/my/maria-10.1/mysql-test/var/tmp/mysqld.1.sock);
+ERROR HY000: Lost connection to MySQL server at 'reading initial communication packet', system error: 95 "Operation not supported"
+set global debug_dbug=@old_debug;
+select 1;
+1
+1
+set @@global.thread_cache_size=2;
+select 1;
+1
+1
+select 1;
+1
+1
+set global debug_dbug='+d,simulate_failed_connection_2';
+connect(localhost,root,,test,16001,/my/maria-10.1/mysql-test/var/tmp/mysqld.1.sock);
+ERROR HY000: Lost connection to MySQL server at 'reading initial communication packet', system error: 95 "Operation not supported"
+set global debug_dbug=@old_debug;
+set global thread_cache_size=@old_thread_cache_size;
