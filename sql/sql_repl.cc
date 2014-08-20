@@ -2095,9 +2095,7 @@ void mysql_binlog_send(THD* thd, char* log_ident, my_off_t pos,
     goto err;
   }
 
-  mysql_mutex_lock(&LOCK_thread_count);
   thd->current_linfo = &linfo;
-  mysql_mutex_unlock(&LOCK_thread_count);
 
   if ((file=open_binlog(&log, log_file_name, &errmsg)) < 0)
   {
@@ -2682,9 +2680,7 @@ end:
   RUN_HOOK(binlog_transmit, transmit_stop, (thd, flags));
   my_eof(thd);
   THD_STAGE_INFO(thd, stage_waiting_to_finalize_termination);
-  mysql_mutex_lock(&LOCK_thread_count);
-  thd->current_linfo = 0;
-  mysql_mutex_unlock(&LOCK_thread_count);
+  thd->reset_current_linfo();
   thd->variables.max_allowed_packet= old_max_allowed_packet;
   delete info.fdev;
   DBUG_VOID_RETURN;
@@ -2749,16 +2745,9 @@ err:
     strcpy(error_text, errmsg);
   end_io_cache(&log);
   RUN_HOOK(binlog_transmit, transmit_stop, (thd, flags));
-  /*
-    Exclude  iteration through thread list
-    this is needed for purge_logs() - it will iterate through
-    thread list and update thd->current_linfo->index_file_offset
-    this mutex will make sure that it never tried to update our linfo
-    after we return from this stack frame
-  */
-  mysql_mutex_lock(&LOCK_thread_count);
-  thd->current_linfo = 0;
-  mysql_mutex_unlock(&LOCK_thread_count);
+
+  thd->reset_current_linfo();
+
   if (file >= 0)
     mysql_file_close(file, MYF(MY_WME));
   thd->variables.max_allowed_packet= old_max_allowed_packet;
@@ -3135,9 +3124,7 @@ err:
   SYNOPSIS
     kill_zombie_dump_threads()
     slave_server_id     the slave's server id
-
 */
-
 
 void kill_zombie_dump_threads(uint32 slave_server_id)
 {
@@ -3677,9 +3664,7 @@ bool mysql_show_binlog_events(THD* thd)
       goto err;
     }
 
-    mysql_mutex_lock(&LOCK_thread_count);
-    thd->current_linfo = &linfo;
-    mysql_mutex_unlock(&LOCK_thread_count);
+    thd->current_linfo= &linfo;
 
     if ((file=open_binlog(&log, linfo.log_file_name, &errmsg)) < 0)
       goto err;
@@ -3775,9 +3760,7 @@ err:
   else
     my_eof(thd);
 
-  mysql_mutex_lock(&LOCK_thread_count);
-  thd->current_linfo = 0;
-  mysql_mutex_unlock(&LOCK_thread_count);
+  thd->reset_current_linfo();
   thd->variables.max_allowed_packet= old_max_allowed_packet;
   DBUG_RETURN(ret);
 }

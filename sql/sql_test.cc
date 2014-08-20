@@ -97,7 +97,7 @@ static void print_cached_tables(void)
       THD *in_use= entry->in_use;
       printf("%-14.14s %-32s%6ld%8ld%6d  %s\n",
              entry->s->db.str, entry->s->table_name.str, entry->s->tdc.version,
-             in_use ? in_use->thread_id : 0,
+             in_use ? (ulong) in_use->thread_id : (ulong) 0,
              entry->db_stat ? 1 : 0,
              in_use ? lock_descriptions[(int)entry->reginfo.lock_type] :
                       "Not in use");

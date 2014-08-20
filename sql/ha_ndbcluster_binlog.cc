@@ -3644,9 +3644,7 @@ pthread_handler_t ndb_binlog_thread_func(void *arg)
   /* We need to set thd->thread_id before thd->store_globals, or it will
      set an invalid value for thd->variables.pseudo_thread_id.
   */
-  mysql_mutex_lock(&LOCK_thread_count);
-  thd->thread_id= thread_id++;
-  mysql_mutex_unlock(&LOCK_thread_count);
+  thd->thread_id= next_thread_id();
 
   mysql_thread_set_psi_id(thd->thread_id);
 
@@ -3683,9 +3681,7 @@ pthread_handler_t ndb_binlog_thread_func(void *arg)
 
   pthread_detach_this_thread();
   thd->real_id= pthread_self();
-  mysql_mutex_lock(&LOCK_thread_count);
-  threads.append(thd);
-  mysql_mutex_unlock(&LOCK_thread_count);
+  add_to_active_threads(thd);
   thd->lex->start_transaction_opt= 0;
 
   if (!(s_ndb= new Ndb(g_ndb_cluster_connection, "")) ||

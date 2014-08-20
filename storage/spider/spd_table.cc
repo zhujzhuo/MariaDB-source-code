@@ -42,7 +42,6 @@
 #include "spd_ping_table.h"
 #include "spd_malloc.h"
 
-ulong *spd_db_att_thread_id;
 #ifdef XID_CACHE_IS_SPLITTED
 uint *spd_db_att_xid_cache_split_num;
 #endif
@@ -6187,8 +6186,6 @@ int spider_db_init(
 
 #ifdef _WIN32
   HMODULE current_module = GetModuleHandle(NULL);
-  spd_db_att_thread_id = (ulong *)
-    GetProcAddress(current_module, "?thread_id@@3KA");
 #ifdef XID_CACHE_IS_SPLITTED
   spd_db_att_xid_cache_split_num = (uint *)
     GetProcAddress(current_module,
@@ -6219,7 +6216,6 @@ int spider_db_init(
   spd_abort_loop = (bool volatile *)
     GetProcAddress(current_module, "?abort_loop@@3_NC");
 #else
-  spd_db_att_thread_id = &thread_id;
 #ifdef XID_CACHE_IS_SPLITTED
   spd_db_att_xid_cache_split_num = &opt_xid_cache_split_num;
   spd_db_att_LOCK_xid_cache = LOCK_xid_cache;

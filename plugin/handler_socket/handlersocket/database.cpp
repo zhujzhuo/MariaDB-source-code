@@ -306,10 +306,10 @@ dbcontext::init_thread(const void *stack_bottom, volatile int& shutdown_flag)
     DBG_THR(fprintf(stderr, "HNDSOCK x0 %p\n", thd));
   }
   {
+    thd->thread_id = next_thread_id();
+    thread_safe_increment32(&thread_count, &thread_count_lock);
     pthread_mutex_lock(&LOCK_thread_count);
-    thd->thread_id = thread_id++;
     threads.append(thd);
-    ++thread_count;
     pthread_mutex_unlock(&LOCK_thread_count);
   }
 

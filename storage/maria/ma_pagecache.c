@@ -1071,7 +1071,7 @@ static inline void dec_counter_for_resize_op(PAGECACHE *pagecache)
   {
     DBUG_PRINT("signal",
                ("thread %s %ld", last_thread->next->name,
-                last_thread->next->id));
+                (ulong) last_thread->next->id));
     pagecache_pthread_cond_signal(&last_thread->next->suspend);
   }
 }
@@ -1335,7 +1335,8 @@ static void link_block(PAGECACHE *pagecache, PAGECACHE_BLOCK_LINK *block,
       */
       if ((PAGECACHE_HASH_LINK *) thread->opt_info == hash_link)
       {
-        DBUG_PRINT("signal", ("thread: %s %ld", thread->name, thread->id));
+        DBUG_PRINT("signal", ("thread: %s %ld", thread->name,
+                              (ulong) thread->id));
         pagecache_pthread_cond_signal(&thread->suspend);
         wqueue_unlink_from_queue(&pagecache->waiting_for_block, thread);
         block->requests++;
@@ -1573,7 +1574,7 @@ static inline void wait_for_readers(PAGECACHE *pagecache
     DBUG_ENTER("wait_for_readers");
     DBUG_PRINT("wait",
                ("suspend thread: %s %ld  block: %u",
-                thread->name, thread->id,
+                thread->name, (ulong) thread->id,
                 PCBLOCK_NUMBER(pagecache, block)));
     block->condvar= &thread->suspend;
     pagecache_pthread_cond_wait(&thread->suspend, &pagecache->cache_lock);
@@ -1598,7 +1599,7 @@ static void wait_for_flush(PAGECACHE *pagecache
   do
   {
     DBUG_PRINT("wait",
-               ("suspend thread %s %ld", thread->name, thread->id));
+               ("suspend thread %s %ld", thread->name, (ulong) thread->id));
     pagecache_pthread_cond_wait(&thread->suspend,
                                 &pagecache->cache_lock);
   }
@@ -1665,7 +1666,8 @@ static void unlink_hash(PAGECACHE *pagecache, PAGECACHE_HASH_LINK *hash_link)
       if (page->file.file == hash_link->file.file &&
           page->pageno == hash_link->pageno)
       {
-        DBUG_PRINT("signal", ("thread %s %ld", thread->name, thread->id));
+        DBUG_PRINT("signal", ("thread %s %ld", thread->name,
+                              (ulong) thread->id));
         pagecache_pthread_cond_signal(&thread->suspend);
         wqueue_unlink_from_queue(&pagecache->waiting_for_hash_link, thread);
       }
@@ -1805,7 +1807,7 @@ restart:
       thread->opt_info= (void *) &page;
       wqueue_link_into_queue(&pagecache->waiting_for_hash_link, thread);
       DBUG_PRINT("wait",
-                 ("suspend thread %s %ld", thread->name, thread->id));
+                 ("suspend thread %s %ld", thread->name, (ulong) thread->id));
       pagecache_pthread_cond_wait(&thread->suspend,
                                  &pagecache->cache_lock);
       thread->opt_info= NULL;
@@ -1985,7 +1987,8 @@ restart:
         do
         {
           DBUG_PRINT("wait",
-                     ("suspend thread %s %ld", thread->name, thread->id));
+                     ("suspend thread %s %ld", thread->name,
+                      (ulong) thread->id));
           pagecache_pthread_cond_wait(&thread->suspend,
                                      &pagecache->cache_lock);
         }
@@ -2076,7 +2079,8 @@ restart:
           do
           {
             DBUG_PRINT("wait",
-                       ("suspend thread %s %ld", thread->name, thread->id));
+                       ("suspend thread %s %ld", thread->name,
+                        (ulong) thread->id));
             pagecache_pthread_cond_wait(&thread->suspend,
                                        &pagecache->cache_lock);
           }
@@ -2349,7 +2353,7 @@ static my_bool pagecache_wait_lock(PAGECACHE *pagecache,
   do
   {
     DBUG_PRINT("wait",
-               ("suspend thread %s %ld", thread->name, thread->id));
+               ("suspend thread %s %ld", thread->name, (ulong) thread->id));
     pagecache_pthread_cond_wait(&thread->suspend,
                                 &pagecache->cache_lock);
   }
@@ -2750,7 +2754,8 @@ static void read_block(PAGECACHE *pagecache,
       do
       {
         DBUG_PRINT("wait",
-                   ("suspend thread %s %ld", thread->name, thread->id));
+                   ("suspend thread %s %ld", thread->name,
+                    (ulong) thread->id));
         pagecache_pthread_cond_wait(&thread->suspend,
                                    &pagecache->cache_lock);
       }
@@ -4544,7 +4549,7 @@ static int flush_pagecache_blocks_int(PAGECACHE *pagecache,
       {
         DBUG_PRINT("wait",
                    ("(1) suspend thread %s %ld",
-                    thread->name, thread->id));
+                    thread->name, (ulong) thread->id));
         pagecache_pthread_cond_wait(&thread->suspend,
                                     &pagecache->cache_lock);
       }
@@ -4705,7 +4710,7 @@ restart:
         {
           DBUG_PRINT("wait",
                      ("(2) suspend thread %s %ld",
-                              thread->name, thread->id));
+                              thread->name, (ulong) thread->id));
           pagecache_pthread_cond_wait(&thread->suspend,
                                      &pagecache->cache_lock);
         }
@@ -4909,7 +4914,8 @@ my_bool pagecache_collect_changed_blocks_with_lsn(PAGECACHE *pagecache,
       do
       {
         DBUG_PRINT("wait",
-                   ("suspend thread %s %ld", thread->name, thread->id));
+                   ("suspend thread %s %ld", thread->name,
+                    (ulong) thread->id));
         pagecache_pthread_cond_wait(&thread->suspend,
                                     &pagecache->cache_lock);
       }
@@ -5052,7 +5058,8 @@ static void pagecache_dump(PAGECACHE *pagecache)
   PAGECACHE_PAGE *page;
   uint i;
 
-  fprintf(pagecache_dump_file, "thread: %s %ld\n", thread->name, thread->id);
+  fprintf(pagecache_dump_file, "thread: %s %ld\n", thread->name,
+          (ulong) thread->id);
 
   i=0;
   thread=last=waiting_for_hash_link.last_thread;
@@ -5064,7 +5071,7 @@ static void pagecache_dump(PAGECACHE *pagecache)
       page= (PAGECACHE_PAGE *) thread->opt_info;
       fprintf(pagecache_dump_file,
               "thread: %s %ld, (file,pageno)=(%u,%lu)\n",
-              thread->name, thread->id,
+              thread->name, (ulong) thread->id,
               (uint) page->file.file,(ulong) page->pageno);
       if (++i == MAX_QUEUE_LEN)
         break;
@@ -5081,7 +5088,7 @@ static void pagecache_dump(PAGECACHE *pagecache)
       hash_link= (PAGECACHE_HASH_LINK *) thread->opt_info;
       fprintf(pagecache_dump_file,
               "thread: %s %u hash_link:%u (file,pageno)=(%u,%lu)\n",
-              thread->name, thread->id,
+              thread->name, (ulong) thread->id,
               (uint) PAGECACHE_HASH_LINK_NUMBER(pagecache, hash_link),
         (uint) hash_link->file.file,(ulong) hash_link->pageno);
       if (++i == MAX_QUEUE_LEN)
@@ -5111,7 +5118,7 @@ static void pagecache_dump(PAGECACHE *pagecache)
         {
           thread=thread->next;
           fprintf(pagecache_dump_file,
-                  "thread: %s %ld\n", thread->name, thread->id);
+                  "thread: %s %ld\n", thread->name, (ulong) thread->id);
           if (++i == MAX_QUEUE_LEN)
             break;
         }

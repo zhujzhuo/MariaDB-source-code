@@ -2029,6 +2029,7 @@ public:
   {
     /* The following is not really needed, but just for safety */
     delayed_row *row;
+    char *tmp;
     while ((row=rows.get()))
       delete row;
     if (table)
@@ -2036,16 +2037,28 @@ public:
       close_thread_tables(&thd);
       thd.mdl_context.release_transactional_locks();
     }
-    mysql_mutex_lock(&LOCK_thread_count);
     mysql_mutex_destroy(&mutex);
     mysql_cond_destroy(&cond);
     mysql_cond_destroy(&cond_client);
+
+    /* Free first the query object */
+    tmp= thd.query();
+    thd.set_query((char*) "",0);
+    my_free(tmp);
+
+    /*
+      We could use unlink_not_visible_threads() here, but as
+      delayed_insert_threads also needs to be protected by
+      the LOCK_thread_count mutex, we open code this.
+    */
+    mysql_mutex_lock(&LOCK_thread_count);
     thd.unlink();				// Must be unlinked under lock
-    my_free(thd.query());
-    thd.security_ctx->user= thd.security_ctx->host=0;
     delayed_insert_threads--;
     mysql_mutex_unlock(&LOCK_thread_count);
-    thread_safe_decrement32(&thread_count, &thread_count_lock);
+
+    thd.security_ctx->user= 0;
+    thd.security_ctx->host= 0;
+    dec_thread_count();
     mysql_cond_broadcast(&COND_thread_count); /* Tell main we are ready */
   }
 
@@ -2749,15 +2762,13 @@ pthread_handler_t handle_delayed_insert(void *arg)
 
   pthread_detach_this_thread();
   /* Add thread to THD list so that's it's visible in 'show processlist' */
-  mysql_mutex_lock(&LOCK_thread_count);
-  thd->thread_id= thd->variables.pseudo_thread_id= thread_id++;
+  thd->thread_id= thd->variables.pseudo_thread_id= next_thread_id();
   thd->set_current_time();
-  threads.append(thd);
+  add_to_active_threads(thd);
   if (abort_loop)
     thd->killed= KILL_CONNECTION;
   else
     thd->reset_killed();
-  mysql_mutex_unlock(&LOCK_thread_count);
 
   mysql_thread_set_psi_id(thd->thread_id);
 

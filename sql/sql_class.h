@@ -1119,7 +1119,8 @@ public:
     priv_user - The user privilege we are using. May be "" for anonymous user.
     ip - client IP
   */
-  char   *host, *user, *ip;
+  const char *host;
+  char   *user, *ip;
   char   priv_user[USERNAME_LENGTH];
   char   proxy_user[USERNAME_LENGTH + MAX_HOSTNAME + 5];
   /* The host privilege we are using */
@@ -3758,8 +3759,8 @@ public:
   mysql_mutex_t LOCK_wakeup_ready;
   mysql_cond_t COND_wakeup_ready;
   /*
-     The GTID assigned to the last commit. If no GTID was assigned to any commit
-     so far, this is indicated by last_commit_gtid.seq_no == 0.
+     The GTID assigned to the last commit. If no GTID was assigned to any
+     commit so far, this is indicated by last_commit_gtid.seq_no == 0.
   */
   rpl_gtid last_commit_gtid;
 
@@ -3778,8 +3779,41 @@ public:
     return (temporary_tables ||
             (rgi_slave && rgi_have_temporary_tables()));
   }
+
+  /*
+    Reset current_linfo
+    Setting current_linfo to 0 needs to be done with LOCK_thread_count to
+    ensure that adjust_linfo_offsets doesn't use a structure that may
+    be deleted.
+  */
+  inline void reset_current_linfo()
+  {
+    mysql_mutex_lock(&LOCK_thread_count);
+    current_linfo= 0;
+    mysql_mutex_unlock(&LOCK_thread_count);
+  }
 };
 
+inline void add_to_active_threads(THD *thd)
+{
+  mysql_mutex_lock(&LOCK_thread_count);
+  threads.append(thd);
+  mysql_mutex_unlock(&LOCK_thread_count);
+}
+
+/*
+  This should be called when you want to delete a thd that was not
+  running any queries.
+  This function will assert if the THD was not linked.
+*/
+
+inline void unlink_not_visible_thd(THD *thd)
+{
+  thd->assert_if_linked();
+  mysql_mutex_lock(&LOCK_thread_count);
+  thd->unlink();
+  mysql_mutex_unlock(&LOCK_thread_count);
+}
 
 /** A short cut for thd->get_stmt_da()->set_ok_status(). */
 
