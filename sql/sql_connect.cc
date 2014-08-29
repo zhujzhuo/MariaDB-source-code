@@ -1306,6 +1306,7 @@ pthread_handler_t handle_one_connection(void *arg)
   CONNECT *connect= (CONNECT*) arg;
 
   mysql_thread_set_psi_id(connect->thread_id);
+  optimize_system_malloc();
 
   do_handle_one_connection(connect);
   return 0;

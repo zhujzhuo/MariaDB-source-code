@@ -160,6 +160,11 @@ foreach my $option (@ARGV)
     $cmakeargs = $cmakeargs." -DWITH_LIBEVENT=bundled";
     next;
   }
+  if ($option =~ /with-jemalloc=(.*)/)
+  {
+    $cmakeargs = $cmakeargs." -DWITH_JEMALLOC=".$1;
+    next;
+  }
   if($option =~ /with-ssl=/)
   {
     $cmakeargs = $cmakeargs." -DWITH_SSL=yes";

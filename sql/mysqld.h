@@ -739,6 +739,7 @@ dec_thread_running()
 
 extern void set_server_version(void);
 extern void dec_thread_count(void);
+extern void optimize_system_malloc(void);
 
 #if defined(MYSQL_DYNAMIC_PLUGIN) && defined(_WIN32)
 extern "C" THD *_current_thd_noinline();

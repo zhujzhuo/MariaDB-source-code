@@ -4062,6 +4062,60 @@ static void my_malloc_size_cb_func(long long size, my_bool is_thread_specific)
 }
 
 
+/*
+  Disable jemalloc thread cache if we are not using MariaDB thread cache.
+  This is needed as jemalloc performs very badily if we are creating and
+  destroying a lot of threads.
+*/
+
+#if defined(HAVE_JEMALLOC) && !defined(EMBEDDED_LIBRARY)
+
+extern "C" int mallctlnametomib(const char *name, size_t *mibp,
+                                size_t *miblenp);
+extern "C" int mallctlbymib(const size_t *mib, size_t miblen, void *oldp,
+                            size_t *oldlenp, void *newp, size_t newlen);
+
+size_t mallctl_thread_tcache_enabled[3], mallctl_thread_tcache_enabled_len= 3;
+
+static void initialize_system_malloc()
+{
+  if (mallctlnametomib("thread.tcache.enabled", mallctl_thread_tcache_enabled,
+                       &mallctl_thread_tcache_enabled_len))
+  {
+    /* Disable optimize_system_malloc */
+    mallctl_thread_tcache_enabled_len= 0;
+  }  
+}
+  
+void optimize_system_malloc()
+{
+  bool set;
+  size_t size;
+
+  if (thread_cache_size != 0 || !mallctl_thread_tcache_enabled_len)
+    return;
+
+  /* Disable thread caching of blocks */
+  set= false;
+  size= sizeof(set);
+  if (mallctlbymib(mallctl_thread_tcache_enabled,
+                   mallctl_thread_tcache_enabled_len,
+                   NULL, 0,
+                   &set, size))
+  {
+    DBUG_ASSERT(0);
+  }
+}
+
+
+#else
+static void initialize_system_malloc()
+{}
+void optimize_system_malloc()
+{}
+#endif
+
+
 static int init_common_variables()
 {
   umask(((~my_umask) & 0666));
@@ -4082,6 +4136,7 @@ static int init_common_variables()
 
   set_current_thd(0);
   set_malloc_size_cb(my_malloc_size_cb_func);
+  initialize_system_malloc();
 
   init_libstrings();
   tzset();			// Set tzname

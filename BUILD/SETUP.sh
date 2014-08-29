@@ -290,6 +290,10 @@ gcov_configs="--with-gcov"
 # gprof
 
 gprof_compile_flags="-O2 -pg -g"
-
+gprof_configs=""
 gprof_link_flags="--disable-shared $static_link"
+
+# For testing grpof without jemalloc
+#gprof_configs="--with-jemalloc=no --without-plugin-tokudb"
+
 

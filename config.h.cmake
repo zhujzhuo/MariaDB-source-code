@@ -636,6 +636,7 @@
 #define PROTOCOL_VERSION 10
 
 #define MALLOC_LIBRARY "@MALLOC_LIBRARY@"
+#cmakedefine HAVE_JEMALLOC
 
 /* time_t related defines */
 
