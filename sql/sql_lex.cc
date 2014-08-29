@@ -1231,11 +1231,13 @@ int lex_one_token(void *arg, THD *thd)
         }
       }
 
-      lip->body_utf8_append(lip->m_cpp_text_start);
+      if (lip->get_body_utf8_str())
+      {
+        lip->body_utf8_append(lip->m_cpp_text_start);
 
-      lip->body_utf8_append_literal(thd, &yylval->lex_str, cs,
-                                    lip->m_cpp_text_end);
-
+        lip->body_utf8_append_literal(thd, &yylval->lex_str, cs,
+                                      lip->m_cpp_text_end);
+      }
       return(result_state);			// IDENT or IDENT_QUOTED
 
     case MY_LEX_IDENT_SEP:                  // Found ident and now '.'
@@ -1336,10 +1338,12 @@ int lex_one_token(void *arg, THD *thd)
 
       yylval->lex_str= get_token(lip, 0, lip->yyLength());
 
-      lip->body_utf8_append(lip->m_cpp_text_start);
-
-      lip->body_utf8_append_literal(thd, &yylval->lex_str, cs,
-                                    lip->m_cpp_text_end);
+      if (lip->get_body_utf8_str())
+      {
+        lip->body_utf8_append(lip->m_cpp_text_start);
+        lip->body_utf8_append_literal(thd, &yylval->lex_str, cs,
+                                      lip->m_cpp_text_end);
+      }
 
       return(result_state);
 
@@ -1380,11 +1384,12 @@ int lex_one_token(void *arg, THD *thd)
         lip->yySkip();                  // Skip end `
       lip->next_state= MY_LEX_START;
 
-      lip->body_utf8_append(lip->m_cpp_text_start);
-
-      lip->body_utf8_append_literal(thd, &yylval->lex_str, cs,
+      if (lip->get_body_utf8_str())
+      {
+        lip->body_utf8_append(lip->m_cpp_text_start);
+        lip->body_utf8_append_literal(thd, &yylval->lex_str, cs,
                                     lip->m_cpp_text_end);
-
+      }
       return(IDENT_QUOTED);
     }
     case MY_LEX_INT_OR_REAL:		// Complete int or incomplete real
@@ -1495,11 +1500,14 @@ int lex_one_token(void *arg, THD *thd)
       }
       yylval->lex_str.length=lip->yytoklen;
 
-      lip->body_utf8_append(lip->m_cpp_text_start);
-
-      lip->body_utf8_append_literal(thd, &yylval->lex_str,
-        lip->m_underscore_cs ? lip->m_underscore_cs : cs,
-        lip->m_cpp_text_end);
+      if (lip->get_body_utf8_str())
+      {
+        lip->body_utf8_append(lip->m_cpp_text_start);
+        lip->body_utf8_append_literal(thd, &yylval->lex_str,
+                                      lip->m_underscore_cs ?
+                                      lip->m_underscore_cs : cs,
+                                      lip->m_cpp_text_end);
+      }
 
       lip->m_underscore_cs= NULL;
 
@@ -1752,11 +1760,12 @@ int lex_one_token(void *arg, THD *thd)
       }
       yylval->lex_str=get_token(lip, 0, length);
 
-      lip->body_utf8_append(lip->m_cpp_text_start);
-
-      lip->body_utf8_append_literal(thd, &yylval->lex_str, cs,
-                                    lip->m_cpp_text_end);
-
+      if (lip->get_body_utf8_str())
+      {
+        lip->body_utf8_append(lip->m_cpp_text_start);
+        lip->body_utf8_append_literal(thd, &yylval->lex_str, cs,
+                                      lip->m_cpp_text_end);
+      }
       return(result_state);
     }
   }

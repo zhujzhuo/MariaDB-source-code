@@ -1511,6 +1511,10 @@ static void *worker_main(void *param)
   if (last_thread)
     thread_group_destroy(thread_group);
 
+#ifdef HAVE_PSI_THREAD_INTERFACE
+  PSI_THREAD_CALL(delete_current_thread)();
+#endif
+
   my_thread_end();
   return NULL;
 }

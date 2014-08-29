@@ -1401,7 +1401,8 @@ static void backup_current_db_name(THD *thd,
     @retval TRUE  Error
 */
 
-bool mysql_change_db(THD *thd, const LEX_STRING *new_db_name, bool force_switch)
+bool mysql_change_db(THD *thd, const LEX_STRING *new_db_name,
+                     bool force_switch)
 {
   LEX_STRING new_db_file_name;
 
@@ -1447,10 +1448,11 @@ bool mysql_change_db(THD *thd, const LEX_STRING *new_db_name, bool force_switch)
   }
 
   /*
-    Now we need to make a copy because check_db_name requires a
-    non-constant argument. Actually, it takes database file name.
-
-    TODO: fix check_db_name().
+    Now we need to make a copy because:
+    - check_db_name requires a non-constant argument as it may change the
+      db_name to lower case.
+    - If things goes ok, We will store the copy in the THD and it will
+      be freed by the thd.
   */
 
   new_db_file_name.str= my_strndup(new_db_name->str, new_db_name->length,

@@ -4365,7 +4365,7 @@ bool open_tables(THD *thd, TABLE_LIST **start, uint *counter, uint flags,
   }
 
   /*
-    Initialize temporary MEM_ROOT for new .FRM parsing. Do not alloctaate
+    Initialize temporary MEM_ROOT for new .FRM parsing. Do not allocate
     anything yet, to avoid penalty for statements which don't use views
     and thus new .FRM format.
   */

@@ -52,6 +52,7 @@ extra/perror
 extra/replace
 extra/resolve_stack_dump
 extra/resolveip
+gmon.out
 include/*.h.tmp
 include/config.h
 include/my_config.h
@@ -118,6 +119,7 @@ sql-bench/innotest1b
 sql-bench/innotest2
 sql-bench/innotest2a
 sql-bench/innotest2b
+sql-bench/output/*
 sql-bench/run-all-tests
 sql-bench/server-cfg
 sql-bench/test-ATIS
@@ -142,6 +144,8 @@ storage/heap/hp_test2
 storage/maria/aria_chk
 storage/maria/aria_dump_log
 storage/maria/aria_ftdump
+storage/maria/aria_log.*
+storage/maria/aria_log_control
 storage/maria/aria_pack
 storage/maria/aria_read_log
 storage/maria/ma_rt_test
@@ -149,15 +153,21 @@ storage/maria/ma_sp_test
 storage/maria/ma_test1
 storage/maria/ma_test2
 storage/maria/ma_test3
+storage/maria/test1.MA*
+storage/maria/test2.MA*
+storage/maria/tmp/*
 storage/myisam/mi_test1
 storage/myisam/mi_test2
 storage/myisam/mi_test3
 storage/myisam/myisam_ftdump
+storage/myisam/myisam.log
 storage/myisam/myisamchk
 storage/myisam/myisamlog
 storage/myisam/myisampack
 storage/myisam/rt_test
 storage/myisam/sp_test
+storage/myisam/test1.MY*
+storage/myisam/test2.MY*
 storage/perfschema/gen_pfs_lex_token
 storage/perfschema/pfs_lex_token.h
 storage/tokudb/ft-index/buildheader/db.h

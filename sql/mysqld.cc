@@ -2974,14 +2974,6 @@ static bool cache_thread()
     DBUG_PRINT("info", ("Adding thread to cache"));
     cached_thread_count++;
 
-#ifdef HAVE_PSI_THREAD_INTERFACE
-    /*
-      Delete the instrumentation for the job that just completed,
-      before parking this pthread in the cache (blocked on COND_thread_cache).
-    */
-    PSI_THREAD_CALL(delete_current_thread)();
-#endif
-
     while (!abort_loop && ! wake_thread && ! kill_cached_threads)
       mysql_cond_wait(&COND_thread_cache, &LOCK_thread_cache);
     cached_thread_count--;
@@ -3065,6 +3057,13 @@ bool one_thread_per_connection_end(THD *thd, bool put_in_cache)
     unlink_thd(thd);
   /* Mark that current_thd is not valid anymore */
   set_current_thd(0);
+
+#ifdef HAVE_PSI_THREAD_INTERFACE
+  /*
+    Delete the instrumentation for the job that just completed.
+  */
+  PSI_THREAD_CALL(delete_current_thread)();
+#endif
 
   if (put_in_cache && cache_thread() && IF_WSREP(!wsrep_applier, 1))
     DBUG_RETURN(0);                             // Thread is reused

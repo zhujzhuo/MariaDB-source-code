@@ -2179,7 +2179,7 @@ public:
     MEM_ROOT mem_root; // Transaction-life memory allocation pool
     void cleanup()
     {
-      DBUG_ENTER("thd::cleanup");
+      DBUG_ENTER("trans::cleanup");
       changed_tables= 0;
       savepoints= 0;
       /*

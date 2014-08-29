@@ -2942,15 +2942,16 @@ int read_histograms_for_table(THD *thd, TABLE *table, TABLE_LIST *stat_tables)
 
 int read_statistics_for_tables_if_needed(THD *thd, TABLE_LIST *tables)
 {
-  TABLE_LIST stat_tables[STATISTICS_TABLES];
-  Open_tables_backup open_tables_backup;
-
   DBUG_ENTER("read_statistics_for_tables_if_needed");
 
   DEBUG_SYNC(thd, "statistics_read_start");
 
   if (!statistics_for_tables_is_needed(thd, tables))
     DBUG_RETURN(0);
+
+  /* Allocate objects (this takes some time) */
+  TABLE_LIST stat_tables[STATISTICS_TABLES];
+  Open_tables_backup open_tables_backup;
 
   if (open_stat_tables(thd, stat_tables, &open_tables_backup, FALSE))
   {

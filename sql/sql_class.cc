@@ -919,9 +919,12 @@ THD::THD(bool is_applier)
     Pass nominal parameters to init_alloc_root only to ensure that
     the destructor works OK in case of an error. The main_mem_root
     will be re-initialized in init_for_queries().
+
+    The first block needs to be big enough for handling the memory allocated
+    during connection and authentication to avoid any new malloc calls
+    during these.
   */
-  init_sql_alloc(&main_mem_root, ALLOC_ROOT_MIN_BLOCK_SIZE, 0,
-                 MYF(MY_THREAD_SPECIFIC));
+  init_sql_alloc(&main_mem_root, 512, 0, MYF(MY_THREAD_SPECIFIC));
 
   stmt_arena= this;
   thread_stack= 0;
@@ -1034,9 +1037,9 @@ THD::THD(bool is_applier)
   profiling.set_thd(this);
 #endif
   user_connect=(USER_CONN *)0;
-  my_hash_init(&user_vars, system_charset_info, USER_VARS_HASH_SIZE, 0, 0,
-               (my_hash_get_key) get_var_key,
-               (my_hash_free_key) free_user_var, HASH_THREAD_SPECIFIC);
+  my_hash_init2(&user_vars, USER_VARS_HASH_SIZE, system_charset_info, 0, 0, 0,
+                (my_hash_get_key) get_var_key, 0,
+                (my_hash_free_key) free_user_var, HASH_THREAD_SPECIFIC);
 
   sp_proc_cache= NULL;
   sp_func_cache= NULL;
@@ -1550,9 +1553,9 @@ void THD::change_user(void)
   cleanup_done= 0;
   init();
   stmt_map.reset();
-  my_hash_init(&user_vars, system_charset_info, USER_VARS_HASH_SIZE, 0, 0,
-               (my_hash_get_key) get_var_key,
-               (my_hash_free_key) free_user_var, 0);
+  my_hash_init2(&user_vars, USER_VARS_HASH_SIZE, system_charset_info, 0, 0, 0,
+                (my_hash_get_key) get_var_key, 0,
+                (my_hash_free_key) free_user_var, HASH_THREAD_SPECIFIC);
   sp_cache_clear(&sp_proc_cache);
   sp_cache_clear(&sp_func_cache);
 }
@@ -3586,12 +3589,13 @@ Statement_map::Statement_map() :
     START_STMT_HASH_SIZE = 16,
     START_NAME_HASH_SIZE = 16
   };
-  my_hash_init(&st_hash, &my_charset_bin, START_STMT_HASH_SIZE, 0, 0,
-               get_statement_id_as_hash_key,
-               delete_statement_as_hash_key, MYF(0));
-  my_hash_init(&names_hash, system_charset_info, START_NAME_HASH_SIZE, 0, 0,
-               (my_hash_get_key) get_stmt_name_hash_key,
-               NULL,MYF(0));
+  my_hash_init2(&st_hash, START_STMT_HASH_SIZE, &my_charset_bin, 0, 0, 0,
+                get_statement_id_as_hash_key, 0,
+                delete_statement_as_hash_key, MYF(0));
+  my_hash_init2(&names_hash, START_NAME_HASH_SIZE, system_charset_info,
+                0, 0, 0,
+                (my_hash_get_key) get_stmt_name_hash_key, 0,
+                NULL, MYF(0));
 }
 
 
@@ -5427,8 +5431,8 @@ int THD::decide_logging_format(TABLE_LIST *tables)
       }
     }
   }
-#ifndef DBUG_OFF
   else
+  {
     DBUG_PRINT("info", ("decision: no logging since "
                         "mysql_bin_log.is_open() = %d "
                         "and (options & OPTION_BIN_LOG) = 0x%llx "
@@ -5438,7 +5442,7 @@ int THD::decide_logging_format(TABLE_LIST *tables)
                         (variables.option_bits & OPTION_BIN_LOG),
                         WSREP_FORMAT(variables.binlog_format),
                         binlog_filter->db_ok(db)));
-#endif
+  }
 
   DBUG_RETURN(0);
 }
