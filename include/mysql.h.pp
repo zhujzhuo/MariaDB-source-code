@@ -31,7 +31,7 @@ typedef struct st_net {
   my_bool thread_specific_malloc;
   my_bool compress;
   my_bool unused3;
-  unsigned char *unused;
+  void *thd;
   unsigned int last_errno;
   unsigned char error;
   my_bool unused4;
@@ -49,9 +49,9 @@ enum enum_field_types { MYSQL_TYPE_DECIMAL, MYSQL_TYPE_TINY,
    MYSQL_TYPE_DATETIME, MYSQL_TYPE_YEAR,
    MYSQL_TYPE_NEWDATE, MYSQL_TYPE_VARCHAR,
    MYSQL_TYPE_BIT,
-   MYSQL_TYPE_TIMESTAMP2,
-   MYSQL_TYPE_DATETIME2,
-   MYSQL_TYPE_TIME2,
+                        MYSQL_TYPE_TIMESTAMP2,
+                        MYSQL_TYPE_DATETIME2,
+                        MYSQL_TYPE_TIME2,
                         MYSQL_TYPE_NEWDECIMAL=246,
    MYSQL_TYPE_ENUM=247,
    MYSQL_TYPE_SET=248,
@@ -83,7 +83,7 @@ enum enum_mysql_set_option
   MYSQL_OPTION_MULTI_STATEMENTS_ON,
   MYSQL_OPTION_MULTI_STATEMENTS_OFF
 };
-my_bool my_net_init(NET *net, Vio* vio, unsigned int my_flags);
+my_bool my_net_init(NET *net, Vio* vio, void *thd, unsigned int my_flags);
 void my_net_local_init(NET *net);
 void net_end(NET *net);
 void net_clear(NET *net, my_bool clear_buffer);
@@ -553,7 +553,7 @@ int mysql_list_processes_cont(MYSQL_RES **ret, MYSQL *mysql,
 int mysql_options(MYSQL *mysql,enum mysql_option option,
           const void *arg);
 int mysql_options4(MYSQL *mysql,enum mysql_option option,
-                   const void *arg1, const void *arg2);
+                                       const void *arg1, const void *arg2);
 void mysql_free_result(MYSQL_RES *result);
 int mysql_free_result_start(MYSQL_RES *result);
 int mysql_free_result_cont(MYSQL_RES *result, int status);

@@ -1037,21 +1037,9 @@ uchar *query_cache_query_get_key(const uchar *record, size_t *length,
 /**
   libmysql convenience wrapper to insert data into query cache.
 */
-void query_cache_insert(const char *packet, ulong length,
+void query_cache_insert(THD *thd, const char *packet, ulong length,
                         unsigned pkt_nr)
 {
-  THD *thd= current_thd;
-
-  /*
-    Current_thd can be NULL when a new connection is immediately ended
-    due to "Too many connections". thd->store_globals() has not been
-    called at this time and hence set_current_thd(this) has not been
-    called for this thread.
-  */
-
-  if (!thd)
-    return;
-
   query_cache.insert(&thd->query_cache_tls,
                      packet, length,
                      pkt_nr);

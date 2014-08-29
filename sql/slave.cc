@@ -185,6 +185,7 @@ static void set_slave_max_allowed_packet(THD *thd, MYSQL *mysql)
 
   thd->variables.max_allowed_packet= slave_max_allowed_packet;
   thd->net.max_packet_size= slave_max_allowed_packet;
+  thd->net.thd= thd;
   /*
     Adding MAX_LOG_EVENT_HEADER_LEN to the max_packet_size on the I/O
     thread and the mysql->option max_allowed_packet, since a
@@ -2908,7 +2909,7 @@ static int init_slave_thread(THD* thd, Master_info *mi,
                   simulate_error|= (1 << SLAVE_THD_SQL););
   /* We must call store_globals() before doing my_net_init() */
   if (init_thr_lock() || thd->store_globals() ||
-      my_net_init(&thd->net, 0, MYF(MY_THREAD_SPECIFIC)) ||
+      my_net_init(&thd->net, 0, thd, MYF(MY_THREAD_SPECIFIC)) ||
       IF_DBUG(simulate_error & (1<< thd_type), 0))
   {
     thd->cleanup();

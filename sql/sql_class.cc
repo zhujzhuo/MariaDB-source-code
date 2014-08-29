@@ -3889,26 +3889,25 @@ void TMP_TABLE_PARAM::init()
 }
 
 
-void thd_increment_bytes_sent(ulong length)
+void thd_increment_bytes_sent(void *thd, ulong length)
 {
-  THD *thd=current_thd;
-  if (likely(thd != 0))
-  {
-    /* current_thd == 0 when close_connection() calls net_send_error() */
-    thd->status_var.bytes_sent+= length;
-  }
+  /* thd is not set for slaves */
+  if (likely(thd))
+    ((THD*) thd)->status_var.bytes_sent+= length;
 }
 
 
-void thd_increment_bytes_received(ulong length)
+void thd_increment_bytes_received(void *thd, ulong length)
 {
-  current_thd->status_var.bytes_received+= length;
+  if (likely(thd))
+    ((THD*) thd)->status_var.bytes_received+= length;
 }
 
 
-void thd_increment_net_big_packet_count(ulong length)
+void thd_increment_net_big_packet_count(void *thd, ulong length)
 {
-  current_thd->status_var.net_big_packet_count+= length;
+  if (likely(thd))
+    ((THD*) thd)->status_var.net_big_packet_count+= length;
 }
 
 

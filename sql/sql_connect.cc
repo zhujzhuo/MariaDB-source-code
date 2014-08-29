@@ -1522,7 +1522,7 @@ THD *CONNECT::create_thd()
     DBUG_RETURN(0);
 
   set_current_thd(thd);
-  res= my_net_init(&thd->net, vio, MYF(MY_THREAD_SPECIFIC));
+  res= my_net_init(&thd->net, vio, thd, MYF(MY_THREAD_SPECIFIC));
   vio= 0;                              // Vio now handled by thd
 
   if (res)
