@@ -3414,23 +3414,29 @@ make_join_statistics(JOIN *join, List<TABLE_LIST> &tables_list,
   LINT_INIT(table); /* inited in all loops */
   table_count=join->table_count;
 
-  stat=(JOIN_TAB*) join->thd->calloc(sizeof(JOIN_TAB)*(table_count));
-  stat_ref=(JOIN_TAB**) join->thd->alloc(sizeof(JOIN_TAB*)*
-                                         (MAX_TABLES + table_count + 1));
-  stat_vector= stat_ref + MAX_TABLES;
-  table_vector=(TABLE**) join->thd->calloc(sizeof(TABLE*)*(table_count*2));
-  join->positions= new (join->thd->mem_root) POSITION[(table_count+1)];
   /*
     best_positions is ok to allocate with alloc() as we copy things to it with
     memcpy()
   */
-  join->best_positions= (POSITION*) join->thd->alloc(sizeof(POSITION)*
-                                                     (table_count +1));
 
-  if (join->thd->is_fatal_error)
-    DBUG_RETURN(1);				// Eom /* purecov: inspected */
+  if (!multi_alloc_root(join->thd->mem_root,
+                        &stat, sizeof(JOIN_TAB)*(table_count),
+                        &stat_ref, sizeof(JOIN_TAB*)* MAX_TABLES,
+                        &stat_vector, sizeof(JOIN_TAB*)* (table_count +1),
+                        &table_vector, sizeof(TABLE*)*(table_count*2),
+                        &join->positions, sizeof(POSITION)*(table_count + 1),
+                        &join->best_positions,
+                        sizeof(POSITION)*(table_count + 1),
+                        NullS))
+    DBUG_RETURN(1);
 
-  join->best_ref=stat_vector;
+  /* The following should be optimized to only clear critical things */
+  bzero(stat, sizeof(JOIN_TAB)* table_count);
+  /* Initialize POSITION objects */
+  for (i=0 ; i <= table_count ; i++)
+    (void) new ((char*) (join->positions + i)) POSITION;
+
+  join->best_ref= stat_vector;
 
   stat_end=stat+table_count;
   found_const_table_map= all_table_map=0;
@@ -23279,15 +23285,18 @@ void append_possible_keys(String *str, TABLE *table, key_map possible_keys)
   }
 }
 
-// TODO: this function is only applicable for the first non-const optimization
-// join tab. 
+/*
+  TODO: this function is only applicable for the first non-const optimization
+  join tab. 
+*/
+
 void JOIN_TAB::update_explain_data(uint idx)
 {
   if (this == first_breadth_first_tab(join, WALK_OPTIMIZATION_TABS) + join->const_tables &&
       join->select_lex->select_number != INT_MAX &&
       join->select_lex->select_number != UINT_MAX)
   {
-    Explain_table_access *eta= new Explain_table_access();
+    Explain_table_access *eta= new (join->thd->mem_root) Explain_table_access(join->thd->mem_root);
     JOIN_TAB* const first_top_tab= first_breadth_first_tab(join, WALK_OPTIMIZATION_TABS);
     save_explain_data(eta, join->const_table_map, join->select_distinct, first_top_tab);
 
@@ -23740,7 +23749,7 @@ int JOIN::save_explain_data_intern(Explain_query *output, bool need_tmp_table,
   if (message)
   {
     Explain_select *xpl_sel;
-    explain_node= xpl_sel= new (output->mem_root) Explain_select;
+    explain_node= xpl_sel= new (output->mem_root) Explain_select(output->mem_root);
     join->select_lex->set_explain_type(true);
 
     xpl_sel->select_id= join->select_lex->select_number;
@@ -23757,7 +23766,7 @@ int JOIN::save_explain_data_intern(Explain_query *output, bool need_tmp_table,
            join->select_lex->master_unit()->derived->is_materialized_derived())
   {
     Explain_select *xpl_sel;
-    explain_node= xpl_sel= new (output->mem_root) Explain_select;
+    explain_node= xpl_sel= new (output->mem_root) Explain_select(output->mem_root);
     table_map used_tables=0;
 
     join->select_lex->set_explain_type(true);
@@ -23787,8 +23796,9 @@ int JOIN::save_explain_data_intern(Explain_query *output, bool need_tmp_table,
         tab= pre_sort_join_tab;
       }
 
-      Explain_table_access *eta= new (output->mem_root) Explain_table_access;
-      xpl_sel->add_table(eta);
+      Explain_table_access *eta= (new (output->mem_root)
+                                  Explain_table_access(output->mem_root));
+      xpl_sel->add_table(eta, output);
 
       tab->save_explain_data(eta, used_tables, distinct, first_top_tab);
 

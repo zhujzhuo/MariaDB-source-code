@@ -4229,7 +4229,7 @@ int LEX::print_explain(select_result_sink *output, uint8 explain_flags,
 int st_select_lex_unit::save_union_explain(Explain_query *output)
 {
   SELECT_LEX *first= first_select();
-  Explain_union *eu= new (output->mem_root) Explain_union;
+  Explain_union *eu= new (output->mem_root) Explain_union(output->mem_root);
 
   for (SELECT_LEX *sl= first; sl; sl= sl->next_select())
     eu->add_select(sl->select_number);

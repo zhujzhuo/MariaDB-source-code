@@ -73,6 +73,9 @@ class Explain_query;
 class Explain_node : public Sql_alloc
 {
 public:
+  Explain_node(MEM_ROOT *root)
+    :children(root)
+  {}
   enum explain_node_type 
   {
     EXPLAIN_UNION, 
@@ -118,8 +121,8 @@ class Explain_table_access;
 
   In the non-degenerate case, a SELECT may have a GROUP BY/ORDER BY operation.
 
-  In both cases, the select may have children nodes. class Explain_node provides
-  a way get node's children.
+  In both cases, the select may have children nodes. class Explain_node
+  provides a way get node's children.
 */
 
 class Explain_select : public Explain_node
@@ -127,24 +130,15 @@ class Explain_select : public Explain_node
 public:
   enum explain_node_type get_type() { return EXPLAIN_SELECT; }
 
-  Explain_select() : 
+  Explain_select(MEM_ROOT *root) : 
+  Explain_node(root),
     message(NULL), join_tabs(NULL),
     using_temporary(false), using_filesort(false)
   {}
   
   ~Explain_select();
 
-  bool add_table(Explain_table_access *tab)
-  {
-    if (!join_tabs)
-    {
-      join_tabs= (Explain_table_access**) my_malloc(sizeof(Explain_table_access*) *
-                                                MAX_TABLES, MYF(0));
-      n_join_tabs= 0;
-    }
-    join_tabs[n_join_tabs++]= tab;
-    return false;
-  }
+  bool add_table(Explain_table_access *tab, Explain_query *query);
   
   /*
     This is used to save the results of "late" test_if_skip_sort_order() calls
@@ -196,6 +190,10 @@ private:
 class Explain_union : public Explain_node
 {
 public:
+  Explain_union(MEM_ROOT *root) : 
+  Explain_node(root)
+  {}
+
   enum explain_node_type get_type() { return EXPLAIN_UNION; }
 
   int get_select_id()
@@ -284,7 +282,7 @@ class Explain_insert;
 class Explain_query : public Sql_alloc
 {
 public:
-  Explain_query(THD *thd);
+  Explain_query(THD *thd, MEM_ROOT *root);
   ~Explain_query();
 
   /* Add a new node */
@@ -460,26 +458,37 @@ private:
 class Explain_table_access : public Sql_alloc
 {
 public:
+  Explain_table_access(MEM_ROOT *root) :
+  extra_tags(root)
+  {}
+
   void push_extra(enum explain_extra_tag extra_tag);
 
   /* Internals */
-public:
+
+  /* id and 'select_type' are cared-of by the parent Explain_select */
+  StringBuffer<32> table_name;
+  StringBuffer<32> used_partitions;
+  /* Empty string means "NULL" will be printed */
+  StringBuffer<32> possible_keys_str;
+  StringBuffer<32> ref;
+  // valid with ET_USING_MRR
+  StringBuffer<32> mrr_type;
+  StringBuffer<32> firstmatch_table_name;
+
+  enum join_type type;
   /* 
     0 means this tab is not inside SJM nest and should use Explain_select's id
     other value means the tab is inside an SJM nest.
   */
   int sjm_nest_select_id;
 
-  /* id and 'select_type' are cared-of by the parent Explain_select */
-  StringBuffer<32> table_name;
-
-  enum join_type type;
-
-  StringBuffer<32> used_partitions;
   bool used_partitions_set;
-  
-  /* Empty string means "NULL" will be printed */
-  StringBuffer<32> possible_keys_str;
+  bool ref_set; /* not set means 'NULL' should be printed */
+  bool rows_set; /* not set means 'NULL' should be printed */
+  bool filtered_set; /* not set means 'NULL' should be printed */
+  // Valid if ET_USING_INDEX_FOR_GROUP_BY is present
+  bool loose_scan_is_scanning;
   
   /*
     Index use: key name and length.
@@ -497,13 +506,7 @@ public:
   */
   Explain_index_use hash_next_key;
   
-  bool ref_set; /* not set means 'NULL' should be printed */
-  StringBuffer<32> ref;
-
-  bool rows_set; /* not set means 'NULL' should be printed */
   ha_rows rows;
-
-  bool filtered_set; /* not set means 'NULL' should be printed */
   double filtered;
 
   /* 
@@ -515,28 +518,20 @@ public:
   // Valid if ET_USING tag is present
   Explain_quick_select *quick_info;
 
-  // Valid if ET_USING_INDEX_FOR_GROUP_BY is present
-  bool loose_scan_is_scanning;
-  
   // valid with ET_RANGE_CHECKED_FOR_EACH_RECORD
   key_map range_checked_map;
 
-  // valid with ET_USING_MRR
-  StringBuffer<32> mrr_type;
-
   // valid with ET_USING_JOIN_BUFFER
   EXPLAIN_BKA_TYPE bka_type;
-  
-  StringBuffer<32> firstmatch_table_name;
+
+  /* ANALYZE members*/
+  Table_access_tracker tracker;
+  Table_access_tracker jbuf_tracker;
 
   int print_explain(select_result_sink *output, uint8 explain_flags, 
                     bool is_analyze,
                     uint select_id, const char *select_type,
                     bool using_temporary, bool using_filesort);
-
-  /* ANALYZE members*/
-  Table_access_tracker tracker;
-  Table_access_tracker jbuf_tracker;
 
 private:
   void append_tag_name(String *str, enum explain_extra_tag tag);
@@ -553,6 +548,11 @@ private:
 class Explain_update : public Explain_node
 {
 public:
+
+  Explain_update(MEM_ROOT *root) : 
+  Explain_node(root)
+  {}
+
   virtual enum explain_node_type get_type() { return EXPLAIN_UPDATE; }
   virtual int get_select_id() { return 1; /* always root */ }
 
@@ -597,6 +597,10 @@ public:
 class Explain_insert : public Explain_node
 {
 public:
+  Explain_insert(MEM_ROOT *root) : 
+  Explain_node(root)
+  {}
+
   StringBuffer<64> table_name;
 
   enum explain_node_type get_type() { return EXPLAIN_INSERT; }
@@ -614,6 +618,10 @@ public:
 class Explain_delete: public Explain_update
 {
 public:
+  Explain_delete(MEM_ROOT *root) : 
+  Explain_update(root)
+  {}
+
   /*
     TRUE means we're going to call handler->delete_all_rows() and not read any
     rows.
