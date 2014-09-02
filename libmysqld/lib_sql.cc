@@ -428,14 +428,12 @@ int emb_unbuffered_fetch(MYSQL *mysql, char **row)
 static void emb_free_embedded_thd(MYSQL *mysql)
 {
   THD *thd= (THD*)mysql->thd;
-  mysql_mutex_lock(&LOCK_thread_count);
   thd->clear_data_list();
-  thread_count--;
-  thd->store_globals();
-  thd->unlink();
+  dec_thread_count();
+  set_current_thd(thd);
+  unlink_not_visible_thd(thd);
   delete thd;
-  mysql_mutex_unlock(&LOCK_thread_count);
-  my_pthread_setspecific_ptr(THR_THD,  0);
+  set_current_thd(0);
   mysql->thd=0;
 }
 
