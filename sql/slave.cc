@@ -289,18 +289,11 @@ static void init_slave_psi_keys(void)
 #endif /* HAVE_PSI_INTERFACE */
 
 
-static bool slave_init_thread_running;
-
-
-pthread_handler_t
-handle_slave_init(void *arg __attribute__((unused)))
+static int init_gtid_state()
 {
-  THD *thd;
-
-  my_thread_init();
-  thd= new THD;
+  THD *thd= new THD;
   thd->thread_stack= (char*) &thd;           /* Set approximate stack start */
-  thd->thread_id= next_thread_id();
+  thd->thread_id= 0;                         // ok for init thread
   thd->store_globals();
 
   thd_proc_info(thd, "Loading slave GTID position from table");
@@ -311,36 +304,9 @@ handle_slave_init(void *arg __attribute__((unused)))
                       thd->get_stmt_da()->sql_errno(),
                       thd->get_stmt_da()->message());
 
+  thd->reset_globals();
   delete thd;
-
-  my_thread_end();
-
-  mysql_mutex_lock(&LOCK_start_thread);
-  slave_init_thread_running= false;
-  mysql_cond_broadcast(&COND_start_thread);
-  mysql_mutex_unlock(&LOCK_start_thread);
-
-  return 0;
-}
-
-
-static int
-run_slave_init_thread()
-{
-  pthread_t th;
-
-  slave_init_thread_running= true;
-  if (mysql_thread_create(key_thread_slave_init, &th, &connection_attrib,
-                          handle_slave_init, NULL))
-  {
-    sql_print_error("Failed to create thread while initialising slave");
-    return 1;
-  }
-
-  mysql_mutex_lock(&LOCK_start_thread);
-  while (slave_init_thread_running)
-    mysql_cond_wait(&COND_start_thread, &LOCK_start_thread);
-  mysql_mutex_unlock(&LOCK_start_thread);
+  set_current_thd(0);
 
   return 0;
 }
@@ -357,7 +323,7 @@ int init_slave()
   init_slave_psi_keys();
 #endif
 
-  if (run_slave_init_thread())
+  if (init_gtid_state())
     return 1;
 
   /*

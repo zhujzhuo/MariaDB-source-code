@@ -665,7 +665,8 @@ inline query_id_t get_query_id()
   return id;
 }
 
-/* increment global_thread_id and return it.  */
+/* increment global_thread_id and return the original value for it.  */
+
 inline __attribute__((warn_unused_result)) my_thread_id next_thread_id()
 {
   my_thread_id id;

@@ -8569,7 +8569,7 @@ static int mysql_init_variables(void)
   denied_connections= 0;
   executed_events= 0;
   global_query_id= 1;
-  global_thread_id= 0;
+  global_thread_id= 1;
   my_atomic_rwlock_init(&global_query_id_lock);
   my_atomic_rwlock_init(&global_thread_id_lock);
   my_atomic_rwlock_init(&thread_running_lock);

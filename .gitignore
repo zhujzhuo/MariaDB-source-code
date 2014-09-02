@@ -71,6 +71,7 @@ libmysqld/examples/mysqltest_embedded
 make_dist.cmake
 mariadb-*.*.*.tar.gz
 mariadb-*.*.*/
+mysql-test/mysql-heartbeat.log
 mysql-test/lib/My/SafeProcess/my_safe_process
 mysql-test/mtr
 mysql-test/mysql-test-run
@@ -136,6 +137,8 @@ sql/gen_lex_hash
 sql/lex_hash.h
 sql/mysql_tzinfo_to_sql
 sql/mysqld
+sql/share/errmsg.sys
+sql/share/*/errmsg.sys
 sql/sql_builtin.cc
 sql/sql_yacc.cc
 sql/sql_yacc.h
