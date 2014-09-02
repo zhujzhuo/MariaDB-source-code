@@ -603,7 +603,9 @@ net_real_write(NET *net,const uchar *packet, size_t len)
   DBUG_ENTER("net_real_write");
 
 #if defined(MYSQL_SERVER) && defined(USE_QUERY_CACHE)
-  query_cache_insert((THD*) net->thd, (char*) packet, len, net->pkt_nr);
+  /* net->thd is always defined, except for connect packages in slaves */
+  if (likely(net->thd))
+    query_cache_insert((THD*) net->thd, (char*) packet, len, net->pkt_nr);
 #endif
 
   if (net->error == 2)
