@@ -1738,6 +1738,7 @@ void add_to_status(STATUS_VAR *to_var, STATUS_VAR *from_var)
   to_var->rows_read+=           from_var->rows_read;
   to_var->rows_sent+=           from_var->rows_sent;
   to_var->rows_tmp_read+=       from_var->rows_tmp_read;
+  to_var->filesort_rows+=       from_var->filesort_rows;
   to_var->binlog_bytes_written+= from_var->binlog_bytes_written;
   to_var->cpu_time+=            from_var->cpu_time;
   to_var->busy_time+=           from_var->busy_time;
@@ -4700,7 +4701,7 @@ void THD::inc_status_sort_range()
 
 void THD::inc_status_sort_rows(ha_rows count)
 {
-  statistic_add(status_var.filesort_rows_, count, &LOCK_status);
+  status_var.filesort_rows+= count;
 #ifdef HAVE_PSI_STATEMENT_INTERFACE
   PSI_STATEMENT_CALL(inc_statement_sort_rows)(m_statement_psi, count);
 #endif

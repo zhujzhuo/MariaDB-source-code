@@ -810,7 +810,7 @@ static int mysql_register_view(THD *thd, TABLE_LIST *view,
   view_query.length(0);
   is_query.length(0);
   {
-    ulong sql_mode= thd->variables.sql_mode & MODE_ANSI_QUOTES;
+    sql_mode_t sql_mode= thd->variables.sql_mode & MODE_ANSI_QUOTES;
     thd->variables.sql_mode&= ~MODE_ANSI_QUOTES;
 
     lex->unit.print(&view_query, QT_VIEW_INTERNAL);

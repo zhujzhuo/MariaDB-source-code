@@ -1371,7 +1371,7 @@ public:
     of the parameters to be passed to the constructor of the Unique object. 
   */  
 
-  Count_distinct_field(Field *field, uint max_heap_table_size)
+  Count_distinct_field(Field *field, ulonglong max_heap_table_size)
   {
     table_field= field;
     tree_key_length= field->pack_length();
@@ -1469,7 +1469,7 @@ class Count_distinct_field_bit: public Count_distinct_field
 {
 public:
 
-  Count_distinct_field_bit(Field *field, uint max_heap_table_size)
+  Count_distinct_field_bit(Field *field, ulonglong max_heap_table_size)
   {
     table_field= field;
     tree_key_length= sizeof(ulonglong);
@@ -2177,7 +2177,7 @@ int alloc_histograms_for_table_share(THD* thd, TABLE_SHARE *table_share,
 inline
 void Column_statistics_collected::init(THD *thd, Field *table_field)
 {
-  uint max_heap_table_size= thd->variables.max_heap_table_size;
+  ulonglong max_heap_table_size= thd->variables.max_heap_table_size;
   TABLE *table= table_field->table;
   uint pk= table->s->primary_key;
   

@@ -2397,7 +2397,8 @@ struct LEX: public Query_tables_list
   LEX_STRING relay_log_connection_name;
   USER_RESOURCES mqh;
   LEX_RESET_SLAVE reset_slave_info;
-  ulonglong type;
+  /* stored procedure type */
+  uint type;
   /* The following is used by KILL */
   killed_state kill_signal;
   killed_type  kill_type;

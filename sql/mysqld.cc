@@ -5418,7 +5418,7 @@ static void handle_connections_methods()
     unireg_abort(1);				// Will not return
   }
 
-  mysql_mutex_lock(&LOCK_thread_start);
+  mysql_mutex_lock(&LOCK_start_thread);
   mysql_cond_init(key_COND_handler_count, &COND_handler_count, NULL);
   handler_count=0;
   if (hPipe != INVALID_HANDLE_VALUE)
@@ -5461,17 +5461,17 @@ static void handle_connections_methods()
 #endif
 
   while (handler_count > 0)
-    mysql_cond_wait(&COND_handler_count, &LOCK_thread_start);
-  mysql_mutex_unlock(&LOCK_thread_start);
+    mysql_cond_wait(&COND_handler_count, &LOCK_start_thread);
+  mysql_mutex_unlock(&LOCK_start_thread);
   DBUG_VOID_RETURN;
 }
 
 void decrement_handler_count()
 {
-  mysql_mutex_lock(&LOCK_thread_start);
+  mysql_mutex_lock(&LOCK_start_thread);
   if (--handler_count == 0)
     mysql_cond_signal(&COND_handler_count);
-  mysql_mutex_unlock(&LOCK_thread_start);
+  mysql_mutex_unlock(&LOCK_start_thread);
   my_thread_end();
 }
 #else
@@ -6358,7 +6358,7 @@ void create_thread_to_handle_connection(CONNECT *connect)
     In single-threaded mode (\#define ONE_THREAD) connection will be
     handled inside this function.
 
-  @param[in,out] thd    Thread handle of future thread.
+  @param[in,out] connect    CONNECT object used to create a thd
 */
 
 static void create_new_thread(CONNECT *connect)
@@ -6691,7 +6691,8 @@ pthread_handler_t handle_connections_namedpipes(void *arg)
 {
   HANDLE hConnectedPipe;
   OVERLAPPED connectOverlapped= {0};
-  THD *thd;
+  CONNECT *connect;
+
   my_thread_init();
   DBUG_ENTER("handle_connections_namedpipes");
   connectOverlapped.hEvent= CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -6760,7 +6761,7 @@ pthread_handler_t handle_connections_namedpipes(void *arg)
       continue;					// We have to try again
     }
 
-    if (!(connect= new CONNECT) ||
+    if (!(connect= new CONNECT()) ||
         !(connect->vio= vio_new_win32pipe(hConnectedPipe)))
     {
       DisconnectNamedPipe(hConnectedPipe);
@@ -6769,7 +6770,7 @@ pthread_handler_t handle_connections_namedpipes(void *arg)
       continue;
     }
     connect->host= my_localhost;
-    create_new_thread(thd);
+    create_new_thread(connect);
   }
   CloseHandle(connectOverlapped.hEvent);
   DBUG_LEAVE;
@@ -6935,7 +6936,7 @@ pthread_handler_t handle_connections_shared_memory(void *arg)
     if (abort_loop)
       goto errorconn;
 
-    if (!(connect= new CONNECT))
+    if (!(connect= new CONNECT()))
     {
       errmsg= "Could not create CONNECT object";
       goto errorconn;
@@ -6967,7 +6968,7 @@ pthread_handler_t handle_connections_shared_memory(void *arg)
     }
 
     connect->host= my_localhost;                /* Host is unknown */
-    create_new_thread(thd);
+    create_new_thread(connect);
     connect_number++;
     continue;
 
@@ -8287,7 +8288,7 @@ SHOW_VAR status_vars[]= {
   {"Slow_queries",             (char*) offsetof(STATUS_VAR, long_query_count), SHOW_LONG_STATUS},
   {"Sort_merge_passes",	       (char*) offsetof(STATUS_VAR, filesort_merge_passes_), SHOW_LONG_STATUS},
   {"Sort_range",	       (char*) offsetof(STATUS_VAR, filesort_range_count_), SHOW_LONG_STATUS},
-  {"Sort_rows",		       (char*) offsetof(STATUS_VAR, filesort_rows_), SHOW_LONG_STATUS},
+  {"Sort_rows",		       (char*) offsetof(STATUS_VAR, filesort_rows), SHOW_LONGLONG_STATUS},
   {"Sort_scan",		       (char*) offsetof(STATUS_VAR, filesort_scan_count_), SHOW_LONG_STATUS},
 #ifdef HAVE_OPENSSL
 #ifndef EMBEDDED_LIBRARY

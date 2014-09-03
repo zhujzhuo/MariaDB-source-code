@@ -44,7 +44,7 @@ extern "C" {
 
 typedef uint my_hash_value_type;
 typedef uchar *(*my_hash_get_key)(const uchar *,size_t*,my_bool);
-typedef my_hash_value_type (*my_hash_function)(const CHARSET_INFO *,
+typedef my_hash_value_type (*my_hash_function)(CHARSET_INFO *,
                                                const uchar *, size_t);
 typedef void (*my_hash_free_key)(void *);
 typedef my_bool (*my_hash_walk_action)(void *,void *);

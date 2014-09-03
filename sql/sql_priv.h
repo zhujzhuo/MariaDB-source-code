@@ -27,6 +27,14 @@
 #ifndef SQL_PRIV_INCLUDED
 #define SQL_PRIV_INCLUDED
 
+/*
+  my_global.h is mainly needed for storage engines that starts by including
+  sql_priv.h.
+*/
+#ifndef MY_GLOBAL_INCLUDED
+#include <my_global.h>
+#endif
+
 #ifndef MYSQL_CLIENT
 
 /*
@@ -360,6 +368,7 @@ enum enum_var_type
 };
 
 class sys_var;
+typedef ulonglong sql_mode_t;
 
 enum enum_yes_no_unknown
 {

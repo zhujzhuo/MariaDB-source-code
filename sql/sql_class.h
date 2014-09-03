@@ -19,7 +19,7 @@
 
 /* Classes in mysql */
 
-#include "my_global.h"                          /* NO_EMBEDDED_ACCESS_CHECKS */
+#include "mysqld.h"
 #ifdef MYSQL_SERVER
 #include "unireg.h"                    // REQUIRED: for other includes
 #endif
@@ -484,8 +484,6 @@ class Time_zone;
 
 #define THD_CHECK_SENTRY(thd) DBUG_ASSERT(thd->dbug_sentry == THD_SENTRY_MAGIC)
 
-typedef ulonglong sql_mode_t;
-
 typedef struct system_variables
 {
   /*
@@ -711,7 +709,6 @@ typedef struct system_status_var
   ulong long_query_count;
   ulong filesort_merge_passes_;
   ulong filesort_range_count_;
-  ulong filesort_rows_;
   ulong filesort_scan_count_;
   /* Prepared statements and binary protocol */
   ulong com_stmt_prepare;
@@ -750,6 +747,7 @@ typedef struct system_status_var
   ulonglong rows_read;
   ulonglong rows_sent;
   ulonglong rows_tmp_read;
+  ulonglong filesort_rows;
   ulonglong binlog_bytes_written;
   double last_query_cost;
   double cpu_time, busy_time;

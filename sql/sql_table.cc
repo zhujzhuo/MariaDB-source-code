@@ -1973,7 +1973,8 @@ end:
                                   a trans or non-trans engine.
 
   RETURN VALUES
-    NONE
+    0 ok
+    # errorcode
 
   DESCRIPTION
     Write the binlog if open, routine used in multiple places in this
@@ -2022,7 +2023,6 @@ int write_bin_log(THD *thd, bool clear_error,
   RETURN
     FALSE OK.  In this case ok packet is sent to user
     TRUE  Error
-
 */
 
 bool mysql_rm_table(THD *thd,TABLE_LIST *tables, my_bool if_exists,
@@ -9232,7 +9232,7 @@ copy_data_between_tables(THD *thd, TABLE *from, TABLE *to,
   ha_rows examined_rows;
   ha_rows found_rows;
   bool auto_increment_field_copied= 0;
-  ulonglong save_sql_mode= thd->variables.sql_mode;
+  sql_mode_t save_sql_mode= thd->variables.sql_mode;
   ulonglong prev_insert_id, time_to_report_progress;
   Field **dfield_ptr= to->default_field;
   DBUG_ENTER("copy_data_between_tables");

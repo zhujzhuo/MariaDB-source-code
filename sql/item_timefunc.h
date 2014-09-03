@@ -488,7 +488,7 @@ public:
 
 class Item_temporal_func: public Item_func
 {
-  ulonglong sql_mode;
+  sql_mode_t sql_mode;
 public:
   Item_temporal_func() :Item_func() {}
   Item_temporal_func(Item *a) :Item_func(a) {}

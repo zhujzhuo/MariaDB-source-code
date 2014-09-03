@@ -40,7 +40,6 @@
 #include "rpl_filter.h"           // rpl_filter
 #include "rpl_rli.h"
 #include <m_ctype.h>
-#include <stdarg.h>
 #include "sp_head.h"
 #include "sp.h"
 #include "transaction.h"
@@ -246,6 +245,8 @@ class ACL_USER_BASE :public ACL_ACCESS
 public:
   static void *operator new(size_t size, MEM_ROOT *mem_root)
   { return (void*) alloc_root(mem_root, size); }
+  static void operator delete(void *ptr, MEM_ROOT *mem_root)
+  { /* never called */ }
 
   uchar flags;           // field used to store various state information
   LEX_STRING user;
@@ -1072,7 +1073,7 @@ static bool acl_load(THD *thd, TABLE_LIST *tables)
   bool check_no_resolve= specialflag & SPECIAL_NO_RESOLVE;
   char tmp_name[SAFE_NAME_LEN+1];
   int password_length;
-  ulonglong old_sql_mode= thd->variables.sql_mode;
+  sql_mode_t old_sql_mode= thd->variables.sql_mode;
   DBUG_ENTER("acl_load");
 
   thd->variables.sql_mode&= ~MODE_PAD_CHAR_TO_FULL_LENGTH;
@@ -6281,7 +6282,8 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
   List_iterator <LEX_USER> str_list (list);
   LEX_USER *Str, *tmp_Str, *proxied_user= NULL;
   char tmp_db[SAFE_NAME_LEN+1];
-  bool create_new_users=0, result;
+  bool create_new_users=0;
+  int result;
   TABLE_LIST tables[TABLES_MAX];
   DBUG_ENTER("mysql_grant");
 
@@ -6333,13 +6335,13 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
     }
 
     if (copy_and_check_auth(Str, tmp_Str, thd->lex))
-      result= -1;
+      result= 1;
     else
     if (replace_user_table(thd, tables[USER_TABLE].table, *Str,
                            (!db ? rights : 0), revoke_grant, create_new_users,
                            MY_TEST(thd->variables.sql_mode &
                                    MODE_NO_AUTO_CREATE_USER)))
-      result= -1;
+      result= 1;
     else if (db)
     {
       ulong db_rights= rights & DB_ACLS;
@@ -6347,12 +6349,12 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
       {
 	if (replace_db_table(tables[DB_TABLE].table, db, *Str, db_rights,
 			     revoke_grant))
-	  result= -1;
+	  result= 1;
       }
       else
       {
 	my_error(ER_WRONG_USAGE, MYF(0), "DB GRANT", "GLOBAL PRIVILEGES");
-	result= -1;
+	result= 1;
       }
     }
     else if (is_proxy)
@@ -6362,7 +6364,7 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
                                       Str, proxied_user,
                                       rights & GRANT_ACL ? TRUE : FALSE,
                                       revoke_grant))
-        result= -1;
+        result= 1;
     }
     if (Str->is_role())
       propagate_role_grants(find_acl_role(Str->user.str),
@@ -6381,7 +6383,7 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
   if (!result)
     my_ok(thd);
 
-  DBUG_RETURN(result);
+  DBUG_RETURN(result != 0);
 }
 
 
@@ -6448,7 +6450,7 @@ static bool grant_load(THD *thd, TABLE_LIST *tables)
   bool check_no_resolve= specialflag & SPECIAL_NO_RESOLVE;
   MEM_ROOT **save_mem_root_ptr= my_pthread_getspecific_ptr(MEM_ROOT**,
                                                            THR_MALLOC);
-  ulonglong old_sql_mode= thd->variables.sql_mode;
+  sql_mode_t old_sql_mode= thd->variables.sql_mode;
   DBUG_ENTER("grant_load");
 
   thd->variables.sql_mode&= ~MODE_PAD_CHAR_TO_FULL_LENGTH;
@@ -11411,7 +11413,7 @@ static bool parse_com_change_user_packet(MPVIO_EXT *mpvio, uint packet_length)
                                 mpvio->thd->charset()))
   {
     my_message(ER_UNKNOWN_COM_ERROR, ER(ER_UNKNOWN_COM_ERROR), MYF(0));
-    DBUG_RETURN(packet_error);
+    DBUG_RETURN(1);
   }
 
   DBUG_PRINT("info", ("client_plugin=%s, restart", client_plugin));

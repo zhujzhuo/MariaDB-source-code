@@ -32,6 +32,7 @@
 #define MYSQL_CLIENT
 #undef MYSQL_SERVER
 #define TABLE TABLE_CLIENT
+#include "mysqld.h"
 #include "client_priv.h"
 #include <my_time.h>
 /* That one is necessary for defines of OPTION_NO_FOREIGN_KEY_CHECKS etc */
@@ -46,8 +47,6 @@
 #include "sql_string.h"   // needed for Rpl_filter
 #include "sql_list.h"     // needed for Rpl_filter
 #include "rpl_filter.h"
-
-#include "mysqld.h"
 
 Rpl_filter *binlog_filter= 0;
 

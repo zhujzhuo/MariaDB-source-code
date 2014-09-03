@@ -350,8 +350,9 @@ int sql_set_variables(THD *thd, List<set_var_base> *var_list);
 
 bool fix_delay_key_write(sys_var *self, THD *thd, enum_var_type type);
 
-ulonglong expand_sql_mode(ulonglong sql_mode);
-bool sql_mode_string_representation(THD *thd, ulonglong sql_mode, LEX_STRING *ls);
+sql_mode_t expand_sql_mode(sql_mode_t sql_mode);
+bool sql_mode_string_representation(THD *thd, sql_mode_t sql_mode,
+                                    LEX_STRING *ls);
 int default_regex_flags_pcre(const THD *thd);
 
 extern sys_var *Sys_autocommit_ptr;

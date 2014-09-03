@@ -2082,7 +2082,7 @@ static bool sql_unusable_for_discovery(THD *thd, handlerton *engine,
 int TABLE_SHARE::init_from_sql_statement_string(THD *thd, bool write,
                                         const char *sql, size_t sql_length)
 {
-  ulonglong saved_mode= thd->variables.sql_mode;
+  sql_mode_t saved_mode= thd->variables.sql_mode;
   CHARSET_INFO *old_cs= thd->variables.character_set_client;
   Parser_state parser_state;
   bool error;

@@ -35,10 +35,10 @@
 #define MYSQL_SERVER
 #endif
 
+#include <sql_class.h>          // THD
 #include <sql_cache.h>
 #include <sql_parse.h>          // check_global_access
 #include <sql_acl.h>            // PROCESS_ACL
-#include <sql_class.h>          // THD
 #include <table.h>              // ST_SCHEMA_TABLE
 #include <mysql/plugin.h>
 

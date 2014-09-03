@@ -2809,7 +2809,7 @@ static Sys_var_ulonglong Sys_sort_buffer(
        VALID_RANGE(MIN_SORT_MEMORY, SIZE_T_MAX), DEFAULT(MAX_SORT_MEMORY),
        BLOCK_SIZE(1));
 
-export ulonglong expand_sql_mode(ulonglong sql_mode)
+export sql_mode_t expand_sql_mode(sql_mode_t sql_mode)
 {
   if (sql_mode & MODE_ANSI)
   {
@@ -2896,7 +2896,8 @@ static const char *sql_mode_names[]=
   "PAD_CHAR_TO_FULL_LENGTH",
   0
 };
-export bool sql_mode_string_representation(THD *thd, ulonglong sql_mode,
+
+export bool sql_mode_string_representation(THD *thd, sql_mode_t sql_mode,
                                            LEX_STRING *ls)
 {
   set_to_string(thd, ls, sql_mode, sql_mode_names);
@@ -2922,7 +2923,7 @@ static const char *old_mode_names[]=
   0
 };
 
-export bool old_mode_string_representation(THD *thd, ulonglong sql_mode,
+export bool old_mode_string_representation(THD *thd, sql_mode_t sql_mode,
                                            LEX_STRING *ls)
 {
   set_to_string(thd, ls, sql_mode, old_mode_names);

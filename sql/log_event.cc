@@ -3434,7 +3434,7 @@ Query_log_event::Query_log_event(const char* buf, uint event_len,
 #endif
       CHECK_SPACE(pos, end, 8);
       sql_mode_inited= 1;
-      sql_mode= (ulong) uint8korr(pos); // QQ: Fix when sql_mode is ulonglong
+      sql_mode= (sql_mode_t) uint8korr(pos);
       DBUG_PRINT("info",("In Query_log_event, read sql_mode: %s",
 			 llstr(sql_mode, buff)));
       pos+= 8;
@@ -4140,14 +4140,15 @@ int Query_log_event::do_apply_event(rpl_group_info *rgi,
       thd->slave_expected_error= expected_error;
       if (flags2_inited)
         /*
-          all bits of thd->variables.option_bits which are 1 in OPTIONS_WRITTEN_TO_BIN_LOG
-          must take their value from flags2.
+          all bits of thd->variables.option_bits which are 1 in
+          OPTIONS_WRITTEN_TO_BIN_LOG must take their value from
+          flags2.
         */
         thd->variables.option_bits= flags2|(thd->variables.option_bits & ~OPTIONS_WRITTEN_TO_BIN_LOG);
       /*
         else, we are in a 3.23/4.0 binlog; we previously received a
-        Rotate_log_event which reset thd->variables.option_bits and sql_mode etc, so
-        nothing to do.
+        Rotate_log_event which reset thd->variables.option_bits and
+        sql_mode etc, so nothing to do.
       */
       /*
         We do not replicate MODE_NO_DIR_IN_CREATE. That is, if the master is a
@@ -4159,8 +4160,8 @@ int Query_log_event::do_apply_event(rpl_group_info *rgi,
       */
       if (sql_mode_inited)
         thd->variables.sql_mode=
-          (ulong) ((thd->variables.sql_mode & MODE_NO_DIR_IN_CREATE) |
-                   (sql_mode & ~(ulong) MODE_NO_DIR_IN_CREATE));
+          (sql_mode_t) ((thd->variables.sql_mode & MODE_NO_DIR_IN_CREATE) |
+                   (sql_mode & ~(sql_mode_t) MODE_NO_DIR_IN_CREATE));
       if (charset_inited)
       {
         rpl_sql_thread_info *sql_info= thd->system_thread_info.rpl_sql_info;
@@ -9833,7 +9834,7 @@ int Rows_log_event::do_apply_event(rpl_group_info *rgi)
       extra columns on the slave. In that case, do not force
       MODE_NO_AUTO_VALUE_ON_ZERO.
     */
-    ulonglong saved_sql_mode= thd->variables.sql_mode;
+    sql_mode_t saved_sql_mode= thd->variables.sql_mode;
     if (!is_auto_inc_in_extra_columns())
       thd->variables.sql_mode= MODE_NO_AUTO_VALUE_ON_ZERO;
 
