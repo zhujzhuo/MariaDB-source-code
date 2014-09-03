@@ -374,6 +374,13 @@ UNIV_INTERN ulong	srv_doublewrite_batch_size	= 120;
 
 UNIV_INTERN ulong	srv_replication_delay		= 0;
 
+UNIV_INTERN ibool	srv_apply_log_only	= FALSE;
+
+UNIV_INTERN ibool	srv_backup_mode	= FALSE;
+
+UNIV_INTERN ulint	srv_log_checksum_algorithm =
+	SRV_CHECKSUM_ALGORITHM_INNODB;
+
 /*-------------------------------------------*/
 UNIV_INTERN ulong	srv_n_spin_wait_rounds	= 30;
 UNIV_INTERN ulong	srv_spin_wait_delay	= 6;

@@ -866,6 +866,28 @@ btr_lift_page_up(
 #define BTR_TOTAL_SIZE		2
 #endif /* !UNIV_HOTBACKUP */
 
+/**************************************************************//**
+Gets the root node of a tree and x- or s-latches it.
+@return	root page, x- or s-latched */
+buf_block_t*
+btr_root_block_get(
+/*===============*/
+	const dict_index_t*	index,	/*!< in: index tree */
+	ulint			mode,	/*!< in: either RW_S_LATCH
+					or RW_X_LATCH */
+	mtr_t*			mtr);	/*!< in: mtr */
+
+/************************************************************//**
+Returns the child page of a node pointer and x-latches it.
+@return	child page, x-latched */
+buf_block_t*
+btr_node_ptr_get_child(
+/*===================*/
+	const rec_t*	node_ptr,/*!< in: node pointer */
+	dict_index_t*	index,	/*!< in: index */
+	const ulint*	offsets,/*!< in: array returned by rec_get_offsets() */
+	mtr_t*		mtr);	/*!< in: mtr */
+
 #ifndef UNIV_NONINL
 #include "btr0btr.ic"
 #endif

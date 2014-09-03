@@ -129,7 +129,7 @@ SRV_SHUTDOWN_CLEANUP and then to SRV_SHUTDOWN_LAST_PHASE, and so on */
 UNIV_INTERN enum srv_shutdown_state	srv_shutdown_state = SRV_SHUTDOWN_NONE;
 
 /** Files comprising the system tablespace */
-static os_file_t	files[1000];
+os_file_t	files[1000];
 
 /** io_handler_thread parameters for thread identification */
 static ulint		n[SRV_MAX_N_IO_THREADS + 6];
@@ -763,7 +763,7 @@ open_log_file(
 /*********************************************************************//**
 Creates or opens database data files and closes them.
 @return	DB_SUCCESS or error code */
-static __attribute__((nonnull, warn_unused_result))
+__attribute__((nonnull, warn_unused_result))
 dberr_t
 open_or_create_data_files(
 /*======================*/
@@ -1278,12 +1278,15 @@ srv_undo_tablespace_open(
 /********************************************************************
 Opens the configured number of undo tablespaces.
 @return	DB_SUCCESS or error code */
-static
 dberr_t
 srv_undo_tablespaces_init(
 /*======================*/
 	ibool		create_new_db,		/*!< in: TRUE if new db being
 						created */
+	ibool		backup_mode,		/*!< in: TRUE disables reading
+						the system tablespace (used in
+						XtraBackup), FALSE is passed on
+						recovery. */
 	const ulint	n_conf_tablespaces,	/*!< in: configured undo
 						tablespaces */
 	ulint*		n_opened)		/*!< out: number of UNDO
@@ -2269,6 +2272,7 @@ files_checked:
 
 	err = srv_undo_tablespaces_init(
 		create_new_db,
+		FALSE,
 		srv_undo_tablespaces,
 		&srv_undo_tablespaces_open);
 

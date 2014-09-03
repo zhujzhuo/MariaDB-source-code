@@ -513,6 +513,10 @@ UNIV_INTERN ulong	srv_pass_corrupt_table = 0; /* 0:disable 1:enable */
 UNIV_INTERN ulong	srv_log_checksum_algorithm =
 	SRV_CHECKSUM_ALGORITHM_INNODB;
 
+UNIV_INTERN ibool	srv_apply_log_only	= FALSE;
+
+UNIV_INTERN ibool	srv_backup_mode	= FALSE;
+
 /*-------------------------------------------*/
 UNIV_INTERN ulong	srv_n_spin_wait_rounds	= 30;
 UNIV_INTERN ulong	srv_spin_wait_delay	= 6;

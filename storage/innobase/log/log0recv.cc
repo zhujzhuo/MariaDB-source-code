@@ -713,7 +713,6 @@ recv_synchronize_groups(
 /***********************************************************************//**
 Checks the consistency of the checkpoint info
 @return	TRUE if ok */
-static
 ibool
 recv_check_cp_is_consistent(
 /*========================*/
@@ -743,7 +742,7 @@ recv_check_cp_is_consistent(
 /********************************************************//**
 Looks for the maximum consistent checkpoint from the log groups.
 @return	error code or DB_SUCCESS */
-static __attribute__((nonnull, warn_unused_result))
+__attribute__((nonnull, warn_unused_result))
 dberr_t
 recv_find_max_checkpoint(
 /*=====================*/
@@ -2972,7 +2971,7 @@ recv_init_crash_recovery(void)
 	ib_logf(IB_LOG_LEVEL_INFO,
 		"Reading tablespace information from the .ibd files...");
 
-	fil_load_single_table_tablespaces();
+	fil_load_single_table_tablespaces(NULL);
 
 	/* If we are using the doublewrite method, we will
 	check if there are half-written pages in data files,

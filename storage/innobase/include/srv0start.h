@@ -36,8 +36,11 @@ Created 10/10/1995 Heikki Tuuri
 #define SRV_PATH_SEPARATOR	'/'
 #endif
 
+/** Files comprising the system tablespace */
+extern os_file_t	files[1000];
+
 /*********************************************************************//**
-Normalizes a directory path for Windows: converts slashes to backslashes. 
+Normalizes a directory path for Windows: converts slashes to backslashes.
 */
 UNIV_INTERN
 void

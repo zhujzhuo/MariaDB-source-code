@@ -326,9 +326,6 @@ struct fil_system_t {
 initialized. */
 static fil_system_t*	fil_system	= NULL;
 
-/** Determine if (i) is a user tablespace id or not. */
-# define fil_is_user_tablespace_id(i) ((i) > srv_undo_tablespaces_open)
-
 /** Determine if user has explicitly disabled fsync(). */
 #ifndef __WIN__
 # define fil_buffering_disabled(s)	\
@@ -522,9 +519,21 @@ fil_node_get_space_id(
 	return (node->space->id);
 }
 
+/****************************************************************//**
+Get space id from fil node */
+fil_space_t*
+fil_node_get_space(
+/*===============*/
+        fil_node_t*     node)           /*!< in: Compressed node*/
+{
+	ut_ad(node);
+	ut_ad(node->space);
+
+	return (node->space);
+}
+
 /*******************************************************************//**
 Returns the table space by a given name, NULL if not found. */
-UNIV_INLINE
 fil_space_t*
 fil_space_get_by_name(
 /*==================*/
@@ -4648,7 +4657,6 @@ directory. We retry 100 times if os_file_readdir_next_file() returns -1. The
 idea is to read as much good data as we can and jump over bad data.
 @return 0 if ok, -1 if error even after the retries, 1 if at the end
 of the directory */
-static
 int
 fil_file_readdir_next_file(
 /*=======================*/
@@ -4688,7 +4696,7 @@ space id is != 0.
 @return	DB_SUCCESS or error number */
 UNIV_INTERN
 dberr_t
-fil_load_single_table_tablespaces(void)
+fil_load_single_table_tablespaces(ibool (*pred)(const char*, const char*))
 /*===================================*/
 {
 	int		ret;
@@ -4744,7 +4752,9 @@ fil_load_single_table_tablespaces(void)
 			    "%s/%s", fil_path_to_mysql_datadir, dbinfo.name);
 		srv_normalize_path_for_win(dbpath);
 
-		dbdir = os_file_opendir(dbpath, FALSE);
+		/* We want wrong directory permissions to be a fatal error for
+		XtraBackup. */
+		dbdir = os_file_opendir(dbpath, TRUE);
 
 		if (dbdir != NULL) {
 
@@ -4765,9 +4775,15 @@ fil_load_single_table_tablespaces(void)
 				    && (0 == strcmp(fileinfo.name
 						   + strlen(fileinfo.name) - 4,
 						   ".ibd")
-					|| 0 == strcmp(fileinfo.name
+					/* Ignore .isl files on XtraBackup
+					recovery, all tablespaces must be
+					local. */
+					|| (srv_backup_mode &&
+					    0 == strcmp(fileinfo.name
 						   + strlen(fileinfo.name) - 4,
-						   ".isl"))) {
+							".isl")))
+				    && (!pred ||
+					pred(dbinfo.name, fileinfo.name))) {
 					/* The name ends in .ibd or .isl;
 					try opening the file */
 					fil_load_single_table_tablespace(
@@ -6739,4 +6755,181 @@ fil_get_page_type_name(
 	default:
 		return "PAGE TYPE CORRUPTED";
 	}
+}
+
+/*******************************************************************//**
+Get next file node from tablespace chain of files and if that
+can't be found get next node from file system space list. */
+void
+fil_get_next_node(
+/*==============*/
+	fil_node_t*	last_node, 	/*!< in: last accessed node */
+	fil_space_t*	last_space,	/*!< in: last accessed space */
+	fil_node_t*	out_node,	/*!< out: next node */
+	fil_space_t*	out_space)	/*!< out: next space */
+{
+	out_node = UT_LIST_GET_NEXT(chain, last_node);
+
+	if (out_node != NULL) {
+		out_space = last_space;
+		return;
+	}
+
+	out_space = (out_space == NULL) ?
+		UT_LIST_GET_FIRST(fil_system->space_list) :
+		UT_LIST_GET_NEXT(space_list, last_space);
+
+	while (out_space != NULL &&
+	       (out_space->purpose != FIL_TABLESPACE ||
+		UT_LIST_GET_LEN(out_space->chain) == 0)) {
+		out_space = UT_LIST_GET_NEXT(space_list, out_space);
+	}
+
+	if (out_space == NULL) {
+		return;
+	}
+
+	out_node = UT_LIST_GET_FIRST(out_space->chain);
+}
+
+/*******************************************************************//**
+Get name and path for the tablespace */
+void
+fil_node_get_name_and_path(
+/*=======================*/
+	fil_node_t*	node,		/*!< in: Tablespace node */
+	const char*	node_name,	/*!< out: Tablespace name */
+	const char*	node_path)	/*!< out: Tablespace path */
+{
+	node_name = node->space->name;
+	node_path = node->name;
+}
+
+/****************************************************************//**
+Get space id from filespace */
+ulint
+fil_space_get_space_id(
+/*==================*/
+        fil_space_t*     space)     /*!< in: Filespace */
+{
+	ut_ad(space);
+
+	return (space->id);
+}
+
+/****************************************************************//**
+Get previous node in chain list */
+fil_node_t*
+fil_chain_get_prev(
+/*===============*/
+	fil_node_t*     node)     /*!< in: Filespace node */
+{
+	ut_ad(node);
+
+	return (UT_LIST_GET_PREV(chain, node));
+}
+
+/****************************************************************//**
+Get number of tablespace spaces on fil_system space list */
+ulint
+fil_system_get_n_files(void)
+/*========================*/
+{
+	return(UT_LIST_GET_LEN(fil_system->space_list));
+}
+
+/****************************************************************//**
+Check file node consistency */
+void
+fil_node_check(
+/*===========*/
+	fil_node_t*     node)	/*!< in: Filespace node */
+{
+	ut_ad(node);
+	ut_a(node->n_pending == 0);
+	ut_a(node->n_pending_flushes == 0);
+	ut_a(!node->being_extended);
+}
+
+/****************************************************************//**
+Check is file opened */
+ibool
+fil_node_is_open(
+/*===========*/
+	fil_node_t*     node)	/*!< in: Filespace node */
+{
+	return node->open;
+}
+
+/****************************************************************//**
+Get file handle of file node */
+os_file_t
+fil_node_get_handle(
+/*================*/
+	fil_node_t*     node)	/*!< in: Filespace node */
+{
+	return node->handle;
+}
+
+/****************************************************************//**
+Close file handle and remove it from LRU if it is there.
+Used by xtrabackup. */
+void
+fil_system_close_node(
+	fil_node_t*     node)     /*!< in: Filespace node */
+{
+	ibool ret;
+	ret = os_file_close(fil_node_get_handle(node));
+	ut_a(ret);
+
+	node->open = FALSE;
+
+	ut_a(fil_system->n_open > 0);
+	fil_system->n_open--;
+	fil_n_file_opened--;
+
+	if (node->space->purpose == FIL_TABLESPACE &&
+	    fil_is_user_tablespace_id(node->space->id)) {
+
+		ut_a(UT_LIST_GET_LEN(fil_system->LRU) > 0);
+
+		/* The node is in the LRU list, remove it */
+		UT_LIST_REMOVE(LRU, fil_system->LRU, node);
+	}
+}
+
+/****************************************************************//**
+Open file handle and add it to LRU if it is not there.
+Used by xtrabackup. */
+ibool
+fil_system_open_node(
+	fil_node_t*     node)     /*!< in: Filespace node */
+{
+	ibool success;
+	ut_a(node);
+
+	node->handle =
+			os_file_create_simple_no_error_handling(0, node->name,
+								OS_FILE_OPEN,
+								OS_FILE_READ_ONLY,
+				                                &success, FALSE);
+
+	if (success) {
+		fil_system_enter();
+
+		node->open = TRUE;
+		fil_system->n_open++;
+		fil_n_file_opened++;
+
+		if (node->space->purpose == FIL_TABLESPACE &&
+			fil_is_user_tablespace_id(node->space->id)) {
+
+			/* Put the node to the LRU list */
+			UT_LIST_ADD_FIRST(LRU, fil_system->LRU, node);
+		}
+
+		fil_system_exit();
+	}
+
+	return (success);
 }

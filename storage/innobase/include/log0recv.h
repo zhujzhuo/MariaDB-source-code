@@ -270,6 +270,16 @@ UNIV_INTERN
 void
 recv_sys_var_init(void);
 /*===================*/
+/********************************************************//**
+Looks for the maximum consistent checkpoint from the log groups.
+@return	error code or DB_SUCCESS */
+__attribute__((nonnull, warn_unused_result))
+dberr_t
+recv_find_max_checkpoint(
+/*=====================*/
+	log_group_t**	max_group,	/*!< out: max group */
+	ulint*		max_field);	/*!< out: LOG_CHECKPOINT_1 or
+					LOG_CHECKPOINT_2 */
 #endif /* !UNIV_HOTBACKUP */
 /*******************************************************************//**
 Empties the hash table of stored log records, applying them to appropriate
@@ -317,6 +327,14 @@ void
 recv_recovery_from_archive_finish(void);
 /*===================================*/
 #endif /* UNIV_LOG_ARCHIVE */
+
+/***********************************************************************//**
+Checks the consistency of the checkpoint info
+@return	TRUE if ok */
+ibool
+recv_check_cp_is_consistent(
+/*========================*/
+	const byte*	buf);	/*!< in: buffer containing checkpoint info */
 
 /** Block of log record data */
 struct recv_data_t{

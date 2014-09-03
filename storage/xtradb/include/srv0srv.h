@@ -478,6 +478,10 @@ extern ulong	srv_max_purge_lag_delay;
 
 extern ulong	srv_replication_delay;
 
+extern ibool	srv_apply_log_only;
+
+extern ibool	srv_backup_mode;
+
 extern my_bool  srv_use_stacktrace;
 
 extern ulong	srv_pass_corrupt_table;
@@ -1183,6 +1187,9 @@ struct srv_slot_t{
 # define srv_file_per_table			1
 #endif /* !UNIV_HOTBACKUP */
 
+/** Files comprising the system tablespace */
+extern os_file_t	files[1000];
+
 #ifdef WITH_WSREP
 UNIV_INTERN
 void
@@ -1192,4 +1199,43 @@ wsrep_srv_conc_cancel_wait(
 			thread */
 #endif /* WITH_WSREP */
 
+/*********************************************************************//**
+Creates or opens database data files and closes them.
+@return	DB_SUCCESS or error code */
+__attribute__((nonnull, warn_unused_result))
+dberr_t
+open_or_create_data_files(
+/*======================*/
+	ibool*		create_new_db,	/*!< out: TRUE if new database should be
+					created */
+#ifdef UNIV_LOG_ARCHIVE
+	ulint*		min_arch_log_no,/*!< out: min of archived log
+					numbers in data files */
+	ulint*		max_arch_log_no,/*!< out: max of archived log
+					numbers in data files */
+#endif /* UNIV_LOG_ARCHIVE */
+	lsn_t*		min_flushed_lsn,/*!< out: min of flushed lsn
+					values in data files */
+	lsn_t*		max_flushed_lsn,/*!< out: max of flushed lsn
+					values in data files */
+	ulint*		sum_of_new_sizes);/*!< out: sum of sizes of the
+					new files added */
+
+/********************************************************************
+Opens the configured number of undo tablespaces.
+@return	DB_SUCCESS or error code */
+dberr_t
+srv_undo_tablespaces_init(
+/*======================*/
+	ibool		create_new_db,		/*!< in: TRUE if new db being
+						created */
+	ibool		backup_mode,		/*!< in: TRUE disables reading
+						the system tablespace (used in
+						XtraBackup), FALSE is passed on
+						recovery. */
+	const ulint	n_conf_tablespaces,	/*!< in: configured undo
+						tablespaces */
+	ulint*		n_opened);		/*!< out: number of UNDO
+						tablespaces successfully
+						discovered and opened */
 #endif

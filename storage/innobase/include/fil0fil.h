@@ -45,6 +45,7 @@ Created 10/25/1995 Heikki Tuuri
 // Forward declaration
 struct trx_t;
 struct fil_space_t;
+struct fil_node_t;
 
 typedef std::list<const char*> space_name_list_t;
 
@@ -214,6 +215,9 @@ struct fsp_open_info {
 	ulint		arch_log_no;	/*!< latest archived log file number */
 #endif /* UNIV_LOG_ARCHIVE */
 };
+
+/** Determine if (i) is a user tablespace id or not. */
+# define fil_is_user_tablespace_id(i) ((i) > srv_undo_tablespaces_open)
 
 #ifndef UNIV_HOTBACKUP
 /*******************************************************************//**
@@ -655,7 +659,7 @@ space id is != 0.
 @return	DB_SUCCESS or error number */
 UNIV_INTERN
 dberr_t
-fil_load_single_table_tablespaces(void);
+fil_load_single_table_tablespaces(ibool (*pred)(const char*, const char*));
 /*===================================*/
 /*******************************************************************//**
 Returns TRUE if a single-table tablespace does not exist in the memory cache,
@@ -1080,5 +1084,119 @@ const char*
 fil_get_page_type_name(
 /*===================*/
 	ulint	page_type);	/*!< in: FIL_PAGE_TYPE */
+
+#ifndef UNIV_INNOCHECKSUM
+/*******************************************************************//**
+Get next file node from tablespace chain of files and if that
+can't be found get next node from file system space list. */
+void
+fil_get_next_node(
+/*==============*/
+	fil_node_t*	last_node, 	/*!< in: last accessed node */
+	fil_space_t*	last_space,	/*!< in: last accessed space */
+	fil_node_t*	out_node,	/*!< out: next node */
+	fil_space_t*	out_space);	/*!< out: next space */
+/*******************************************************************//**
+Get name and path for the tablespace */
+void
+fil_node_get_name_and_path(
+/*=======================*/
+	fil_node_t*	node,		/*!< in: Tablespace node */
+	const char*	node_name,	/*!< out: Tablespace name */
+	const char*	node_path);	/*!< out: Tablespace path */
+
+/*******************************************************************//**
+Get space id for the tablespace*/
+ulint
+fil_node_get_space_id(
+/*==================*/
+	fil_node_t*	node);		/*!< in: Tablespace node */
+
+/*******************************************************************//**
+Get space for the tablespace*/
+fil_space_t*
+fil_node_get_space(
+/*===============*/
+	fil_node_t*	node);		/*!< in: Tablespace node */
+
+/*******************************************************************//**
+Returns the table space by a given name, NULL if not found. */
+fil_space_t*
+fil_space_get_by_name(
+/*==================*/
+	const char*	name);		/*!< in: space name */
+
+/****************************************************************//**
+Get space id from filespace */
+ulint
+fil_space_get_space_id(
+/*==================*/
+        fil_space_t*     space);	/*!< in: Filespace */
+
+/***********************************************************************//**
+A fault-tolerant function that tries to read the next file name in the
+directory. We retry 100 times if os_file_readdir_next_file() returns -1. The
+idea is to read as much good data as we can and jump over bad data.
+@return 0 if ok, -1 if error even after the retries, 1 if at the end
+of the directory */
+int
+fil_file_readdir_next_file(
+/*=======================*/
+	dberr_t*	err,	/*!< out: this is set to DB_ERROR if an error
+				was encountered, otherwise not changed */
+	const char*	dirname,/*!< in: directory name or path */
+	os_file_dir_t	dir,	/*!< in: directory stream */
+	os_file_stat_t*	info);	/*!< in/out: buffer where the
+				info is returned */
+
+/****************************************************************//**
+Get previous node in chain list */
+fil_node_t*
+fil_chain_get_prev(
+/*===============*/
+	fil_node_t*     node);  /*!< in: Filespace node */
+
+/****************************************************************//**
+Get number of tablespace spaces on fil_system space list */
+ulint
+fil_system_get_n_files(void);
+/*========================*/
+
+/****************************************************************//**
+Check file node consistency */
+void
+fil_node_check(
+/*===========*/
+	fil_node_t*     node);  /*!< in: Filespace node */
+
+/****************************************************************//**
+Check is file opened */
+ibool
+fil_node_is_open(
+/*===========*/
+	fil_node_t*     node);  /*!< in: Filespace node */
+
+
+/****************************************************************//**
+Get file handle of file node */
+os_file_t
+fil_node_get_handle(
+/*================*/
+	fil_node_t*     node);  /*!< in: Filespace node */
+
+/****************************************************************//**
+Close file handle and remove it from LRU if it is there.
+Used by xtrabackup. */
+void
+fil_system_close_node(
+	fil_node_t*     node);  /*!< in: Filespace node */
+/****************************************************************//**
+Open file handle and add it to LRU if it is not there.
+Used by xtrabackup. */
+ibool
+fil_system_open_node(
+	fil_node_t*     node);     /*!< in: Filespace node */
+
+#endif /* UNIV_INNOCHECKSUM */
 
 #endif /* fil0fil_h */

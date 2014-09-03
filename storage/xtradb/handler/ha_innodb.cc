@@ -269,7 +269,7 @@ static TYPELIB innodb_stats_method_typelib = {
 
 /** Possible values for system variables "innodb_checksum_algorithm" and
 "innodb_log_checksum_algorithm". */
-static const char* innodb_checksum_algorithm_names[] = {
+const char* innodb_checksum_algorithm_names[] = {
 	"CRC32",
 	"STRICT_CRC32",
 	"INNODB",
@@ -281,7 +281,7 @@ static const char* innodb_checksum_algorithm_names[] = {
 
 /** Used to define an enumerate type of the system variables
 innodb_checksum_algorithm and innodb_log_checksum_algorithm. */
-static TYPELIB innodb_checksum_algorithm_typelib = {
+TYPELIB innodb_checksum_algorithm_typelib = {
 	array_elements(innodb_checksum_algorithm_names) - 1,
 	"innodb_checksum_algorithm_typelib",
 	innodb_checksum_algorithm_names,
