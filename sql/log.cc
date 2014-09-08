@@ -43,7 +43,6 @@
 #include "mysqld.h"
 
 #include <my_dir.h>
-#include <stdarg.h>
 #include <m_ctype.h>				// For test_if_number
 
 #ifdef _WIN32
@@ -287,11 +286,12 @@ public:
     incident= FALSE;
     before_stmt_pos= MY_OFF_T_UNDEF;
     /*
-      The truncate function calls reinit_io_cache that calls my_b_flush_io_cache
-      which may increase disk_writes. This breaks the disk_writes use by the
-      binary log which aims to compute the ratio between in-memory cache usage
-      and disk cache usage. To avoid this undesirable behavior, we reset the
-      variable after truncating the cache.
+      The truncate function calls reinit_io_cache that calls
+      my_b_flush_io_cache which may increase disk_writes. This breaks
+      the disk_writes use by the binary log which aims to compute the
+      ratio between in-memory cache usage and disk cache usage. To
+      avoid this undesirable behavior, we reset the variable after
+      truncating the cache.
     */
     cache_log.disk_writes= 0;
     DBUG_ASSERT(empty());
@@ -2646,11 +2646,17 @@ void MYSQL_LOG::close(uint exiting)
       sql_print_error(ER(ER_ERROR_ON_WRITE), name, errno);
     }
 
-    if (!(exiting & LOG_CLOSE_DELAYED_CLOSE) &&
-        mysql_file_close(log_file.file, MYF(MY_WME)) && ! write_error)
+    if (!(exiting & LOG_CLOSE_DELAYED_CLOSE))
     {
-      write_error= 1;
-      sql_print_error(ER(ER_ERROR_ON_WRITE), name, errno);
+      if (mysql_file_close(log_file.file, MYF(MY_WME)))
+      {
+        if (! write_error)
+        {
+          write_error= 1;
+          sql_print_error(ER(ER_ERROR_ON_WRITE), name, errno);
+        }
+      }
+      log_file.file= -1;                        // To catch errors
     }
   }
 
@@ -3206,7 +3212,11 @@ bool MYSQL_BIN_LOG::open_index_file(const char *index_file_name_arg,
       not mysql_file_open().
     */
     if (index_file_nr >= 0)
+    {
       mysql_file_close(index_file_nr, MYF(0));
+      end_io_cache(&index_file);
+      index_file.file= -1;                      // Safety
+    }
     return TRUE;
   }
 
@@ -4815,7 +4825,7 @@ int MYSQL_BIN_LOG::new_file_impl(bool need_lock)
 {
   int error= 0, close_on_error= FALSE;
   char new_name[FN_REFLEN], *new_name_ptr, *old_name, *file_to_open;
-  uint close_flag;
+  uint close_flag= LOG_CLOSE_INDEX;
   bool delay_close= false;
   File old_file;
   LINT_INIT(old_file);
@@ -4895,6 +4905,7 @@ int MYSQL_BIN_LOG::new_file_impl(bool need_lock)
     delay_close= true;
   }
   close(close_flag);
+  close_flag= 0;
   if (log_type == LOG_BIN && checksum_alg_reset != BINLOG_CHECKSUM_ALG_UNDEF)
   {
     DBUG_ASSERT(!is_relay_log);
@@ -4902,16 +4913,17 @@ int MYSQL_BIN_LOG::new_file_impl(bool need_lock)
     binlog_checksum_options= checksum_alg_reset;
   }
   /*
-     Note that at this point, log_state != LOG_CLOSED (important for is_open()).
+    Note that at this point, log_state != LOG_CLOSED (important for is_open()).
   */
 
   /*
      new_file() is only used for rotation (in FLUSH LOGS or because size >
      max_binlog_size or max_relay_log_size).
-     If this is a binary log, the Format_description_log_event at the beginning of
-     the new file should have created=0 (to distinguish with the
-     Format_description_log_event written at server startup, which should
-     trigger temp tables deletion on slaves.
+     
+     If this is a binary log, the Format_description_log_event at the
+     beginning of the new file should have created=0 (to distinguish
+     with the Format_description_log_event written at server startup,
+     which should trigger temp tables deletion on slaves.
   */
 
   /* reopen index binlog file, BUG#34582 */
@@ -4919,6 +4931,7 @@ int MYSQL_BIN_LOG::new_file_impl(bool need_lock)
   error= open_index_file(index_file_name, 0, FALSE);
   if (!error)
   {
+    close_flag= LOG_CLOSE_INDEX;
     /* reopen the binary log file. */
     file_to_open= new_name_ptr;
     error= open(old_name, log_type, new_name_ptr, io_cache_type,
@@ -4957,7 +4970,9 @@ end:
        - switch server to protected/readonly mode
        - ...
     */
-    close(LOG_CLOSE_INDEX);
+    close(close_flag);
+    end_io_cache(&log_file);
+    log_file.file= -1;                          // Safety
     sql_print_error("Could not open %s for logging (error %d). "
                      "Turning logging off for the whole duration "
                      "of the MySQL server process. To turn it on "
@@ -5046,12 +5061,16 @@ err:
 bool MYSQL_BIN_LOG::flush_and_sync(bool *synced)
 {
   int err=0, fd=log_file.file;
+  uint sync_period;
+  DBUG_ENTER("MYSQL_BIN_LOG::flush_and_sync");
+
   if (synced)
     *synced= 0;
   mysql_mutex_assert_owner(&LOCK_log);
-  if (flush_io_cache(&log_file))
-    return 1;
-  uint sync_period= get_sync_period();
+  if (my_b_inited(&log_file) && flush_io_cache(&log_file))
+    DBUG_RETURN(1);
+
+  sync_period= get_sync_period();
   if (sync_period && ++sync_counter >= sync_period)
   {
     sync_counter= 0;
@@ -5063,7 +5082,7 @@ bool MYSQL_BIN_LOG::flush_and_sync(bool *synced)
       my_sleep(opt_binlog_dbug_fsync_sleep);
 #endif
   }
-  return err;
+  DBUG_RETURN(err);
 }
 
 void MYSQL_BIN_LOG::start_union_events(THD *thd, query_id_t query_id_param)
@@ -7718,10 +7737,10 @@ void MYSQL_BIN_LOG::close(uint exiting)
       if (!failed_to_save_state)
         clear_inuse_flag_when_closing(log_file.file);
       /*
-        Restore position so that anything we have in the IO_cache is written
-        to the correct position.
-        We need the seek here, as mysql_file_pwrite() is not guaranteed to keep the
-        original position on system that doesn't support pwrite().
+        Restore position so that anything we have in the IO_cache is
+        written to the correct position.  We need the seek here, as
+        mysql_file_pwrite() is not guaranteed to keep the original
+        position on system that doesn't support pwrite().
       */
       mysql_file_seek(log_file.file, org_position, MY_SEEK_SET, MYF(0));
     }
@@ -7737,12 +7756,14 @@ void MYSQL_BIN_LOG::close(uint exiting)
 
   if ((exiting & LOG_CLOSE_INDEX) && my_b_inited(&index_file))
   {
+    DBUG_ASSERT(index_file.file != -1);
     end_io_cache(&index_file);
     if (mysql_file_close(index_file.file, MYF(0)) < 0 && ! write_error)
     {
       write_error= 1;
       sql_print_error(ER(ER_ERROR_ON_WRITE), index_file_name, errno);
     }
+    index_file.file= -1;           // Protect against program errors
   }
   log_state= (exiting & LOG_CLOSE_TO_BE_OPENED) ? LOG_TO_BE_OPENED : LOG_CLOSED;
   my_free(name);

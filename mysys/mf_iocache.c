@@ -1842,7 +1842,7 @@ int end_io_cache(IO_CACHE *info)
     if (info->file != -1)			/* File doesn't exist */
       error= my_b_flush_io_cache(info,1);
     my_free(info->buffer);
-    info->buffer=info->read_pos=(uchar*) 0;
+    info->read_pos=(uchar*) 0;
   }
   if (info->type == SEQ_READ_APPEND)
   {
@@ -1851,6 +1851,7 @@ int end_io_cache(IO_CACHE *info)
     mysql_mutex_destroy(&info->append_buffer_lock);
   }
   info->share= 0;
+  info->buffer= 0;                              /* For my_b_inited() */
   DBUG_RETURN(error);
 } /* end_io_cache */
 

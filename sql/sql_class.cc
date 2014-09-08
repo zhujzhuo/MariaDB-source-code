@@ -891,9 +891,8 @@ THD::THD(bool is_applier)
    wsrep_client_thread(false),
    wsrep_po_handle(WSREP_PO_INITIALIZER),
    wsrep_po_cnt(0),
-//   wsrep_po_in_trans(false),
-   wsrep_apply_format(0),
    wsrep_apply_toi(false),
+   wsrep_apply_format(0),
 #endif
    m_parser_state(NULL),
 #if defined(ENABLED_DEBUG_SYNC)
@@ -1649,9 +1648,10 @@ THD::~THD()
   mysql_mutex_lock(&LOCK_wsrep_thd);
   mysql_mutex_unlock(&LOCK_wsrep_thd);
   mysql_mutex_destroy(&LOCK_wsrep_thd);
-  if (wsrep_rli) delete wsrep_rli;
-  if (wsrep_rgi) delete wsrep_rgi;
-  if (wsrep_status_vars) wsrep->stats_free(wsrep, wsrep_status_vars);
+  delete wsrep_rli;                             // May be 0
+  delete wsrep_rgi;                             // May be 0
+  if (wsrep_status_vars)
+    wsrep->stats_free(wsrep, wsrep_status_vars);
 #endif
   /* Close connection */
 #ifndef EMBEDDED_LIBRARY
@@ -1967,7 +1967,7 @@ bool THD::notify_shared_lock(MDL_context_owner *ctx_in_use,
       {
         signalled|= mysql_lock_abort_for_thread(this, thd_table);
 #if WITH_WSREP
-        if (this && WSREP(this) && wsrep_thd_is_BF((void *)this, FALSE))
+        if (WSREP(this) && wsrep_thd_is_BF((void *)this, FALSE))
         {
           WSREP_DEBUG("remove_table_from_cache: %llu",
                       (unsigned long long) this->real_id);

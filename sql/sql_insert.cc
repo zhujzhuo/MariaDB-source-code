@@ -2058,8 +2058,6 @@ public:
 
     thd.security_ctx->user= 0;
     thd.security_ctx->host= 0;
-    dec_thread_count();
-    mysql_cond_broadcast(&COND_thread_count); /* Tell main we are ready */
   }
 
   /* The following is for checking when we can delete ourselves */
@@ -2209,7 +2207,7 @@ bool delayed_get_table(THD *thd, MDL_request *grl_protection_request,
       {
         /* The error is reported */
 	delete di;
-        goto end_create;
+        dec_thread_count();
       }
       di->table_list= *table_list;			// Needed to open table
       /* Replace volatile strings with local copies */
@@ -2234,6 +2232,7 @@ bool delayed_get_table(THD *thd, MDL_request *grl_protection_request,
         mysql_mutex_unlock(&di->mutex);
 	di->unlock();
 	delete di;
+        dec_thread_count();
 	my_error(ER_CANT_CREATE_THREAD, MYF(ME_FATALERROR), error);
         goto end_create;
       }
@@ -2971,6 +2970,7 @@ pthread_handler_t handle_delayed_insert(void *arg)
       clients
     */
     delete di;
+    dec_thread_count();
     mysql_mutex_unlock(&LOCK_delayed_insert);
     mysql_mutex_unlock(&LOCK_delayed_create);
 

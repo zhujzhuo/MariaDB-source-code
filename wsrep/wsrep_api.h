@@ -586,11 +586,11 @@ typedef struct wsrep_po_handle { void* opaque; } wsrep_po_handle_t;
 static const wsrep_po_handle_t WSREP_PO_INITIALIZER = { NULL };
 
 
-typedef struct wsrep wsrep_t;
+typedef struct wsrep_struct wsrep_t;
 /*!
  * wsrep interface for dynamically loadable libraries
  */
-struct wsrep {
+struct wsrep_struct {
 
     const char *version; //!< interface version string
 

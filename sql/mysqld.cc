@@ -1989,11 +1989,6 @@ static void __cdecl kill_server(int sig_ptr)
 
   close_connections();
 
-#ifdef WITH_WSREP
-  if (wsrep_inited == 1)
-    wsrep_deinit(true);
-#endif
-
   if (sig != MYSQL_KILL_SIGNAL &&
       sig != 0)
     unireg_abort(1);				/* purecov: inspected */
@@ -2106,10 +2101,6 @@ extern "C" void unireg_abort(int exit_code)
     wsrep_close_threads(thd); /* this won't close all threads */
     sleep(1); /* so give some time to exit for those which can */
     WSREP_INFO("Some threads may fail to exit.");
-
-    /* In bootstrap mode we deinitialize wsrep here. */
-    if (opt_bootstrap && wsrep_inited)
-      wsrep_deinit(true);
   }
 #endif // WITH_WSREP
 
@@ -2162,6 +2153,11 @@ void clean_up(bool print_message)
     what they have that is dependent on the binlog
   */
   ha_binlog_end(current_thd);
+
+#ifdef WITH_WSREP
+  if (wsrep_inited == 1)
+    wsrep_deinit(true);
+#endif
 
   logger.cleanup_base();
 
@@ -2879,15 +2875,6 @@ void dec_connection_count(scheduler_functions *scheduler)
 
 void dec_thread_count(void)
 {
-#ifdef WITH_WSREP
-  /*
-    Do not decrement when its wsrep system thread. wsrep_applier is set for
-    applier as well as rollbacker threads.
-  */
-  if (thd->wsrep_applier)
-    return;
-#endif /* WITH_WSREP */
-
   thread_safe_decrement32(&thread_count, &thread_count_lock);
 
   /*
@@ -2936,11 +2923,20 @@ void unlink_thd(THD *thd)
   DBUG_ENTER("unlink_thd");
   DBUG_PRINT("enter", ("thd: 0x%lx", (long) thd));
 
-  dec_connection_count(thd->scheduler);
+  /*
+    Do not decrement when its wsrep system thread. wsrep_applier is set for
+    applier as well as rollbacker threads.
+  */
+  if (IF_WSREP(!thd->wsrep_applier,1))
+    dec_connection_count(thd->scheduler);
   thd->cleanup();
   thd->add_status_to_global();
   unlink_not_visible_thd(thd);
   delete thd;
+  /*
+    we have to decrement thread count after THD is deleted to ensure we don't
+    call clean_up() while there is still existing thd's.
+  */
   dec_thread_count();
 
   DBUG_VOID_RETURN;

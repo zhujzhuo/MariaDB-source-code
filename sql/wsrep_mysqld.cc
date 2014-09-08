@@ -33,7 +33,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include "log_event.h"
-#include <slave.h>
+#include "slave.h"
+#include "sql_connect.h"
 
 wsrep_t *wsrep                  = NULL;
 my_bool wsrep_emulate_bin_log   = FALSE; // activating parts of binlog interface
@@ -729,12 +730,15 @@ void wsrep_init_startup (bool first)
   wsrep_create_rollbacker();
   wsrep_create_appliers(1);
 
-  if (first && !wsrep_sst_wait()) unireg_abort(1);// wait until SST is completed
+  if (first && !wsrep_sst_wait())
+    unireg_abort(1);// wait until SST is completed
 }
 
 
 void wsrep_deinit(bool free_options)
 {
+  DBUG_ENTER("wsrep_deinit");
+
   DBUG_ASSERT(wsrep_inited == 1);
   wsrep_unload(wsrep);
   wsrep= 0;
@@ -747,6 +751,7 @@ void wsrep_deinit(bool free_options)
   {
     wsrep_sst_auth_free();
   }
+  DBUG_VOID_RETURN;
 }
 
 void wsrep_recover()
@@ -1594,22 +1599,29 @@ pthread_handler_t start_wsrep_THD(void *arg)
   {
     return(NULL);
   }
-  mysql_mutex_lock(&LOCK_thread_count);
-  thd->thread_id=thread_id++;
-
+  thd->thread_id= next_thread_id();
   thd->real_id=pthread_self(); // Keep purify happy
-  thread_count++;
-  thread_created++;
-  threads.append(thd);
+  thread_safe_increment32(&thread_count, &thread_count_lock);
+  statistic_increment(thread_created, &LOCK_status);
+  add_to_active_threads(thd);
+  /*
+    Use one-thread-per-connection scheduler so that THD is automaticly
+    destroyed
+  */
+  thd->scheduler= extra_thread_scheduler;
 
-  my_net_init(&thd->net,(st_vio*) 0, MYF(0));
+  my_net_init(&thd->net,(st_vio*) 0, thd, MYF(0));
 
   DBUG_PRINT("wsrep",(("creating thread %lld"), (long long)thd->thread_id));
   thd->prior_thr_create_utime= thd->start_utime= microsecond_interval_timer();
-  (void) mysql_mutex_unlock(&LOCK_thread_count);
+
+  /* For checking of overruns */
+  thd->thread_stack= (char*) &thd;
+  if (setup_connection_thread_globals(thd))
+    return(NULL);
 
   /* from bootstrap()... */
-  thd->bootstrap=1;
+  thd->bootstrap=1;  /* Don't calculate statistics */
   thd->max_client_packet_length= thd->net.max_packet;
   thd->security_ctx->master_access= ~(ulong)0;
   thd->system_thread_info.rpl_sql_info= &sql_info;
@@ -1619,38 +1631,18 @@ pthread_handler_t start_wsrep_THD(void *arg)
 
   mysql_thread_set_psi_id(thd->thread_id);
   thd->thr_create_utime=  microsecond_interval_timer();
-  if (MYSQL_CALLBACK_ELSE(thread_scheduler, init_new_connection_thread, (), 0))
+  if (MYSQL_CALLBACK_ELSE(extra_thread_scheduler, init_new_connection_thread,
+                          (), 0))
   {
     close_connection(thd, ER_OUT_OF_RESOURCES);
     statistic_increment(aborted_connects,&LOCK_status);
-    MYSQL_CALLBACK(thread_scheduler, end_thread, (thd, 0));
+    MYSQL_CALLBACK(extra_thread_scheduler, end_thread, (thd, 0));
 
     return(NULL);
   }
 
-// </5.1.17>
-  /*
-    handle_one_connection() is normally the only way a thread would
-    start and would always be on the very high end of the stack ,
-    therefore, the thread stack always starts at the address of the
-    first local variable of handle_one_connection, which is thd. We
-    need to know the start of the stack so that we could check for
-    stack overruns.
-  */
   DBUG_PRINT("wsrep", ("handle_one_connection called by thread %lld\n",
                        (long long)thd->thread_id));
-  /* now that we've called my_thread_init(), it is safe to call DBUG_* */
-
-  thd->thread_stack= (char*) &thd;
-  if (thd->store_globals())
-  {
-    close_connection(thd, ER_OUT_OF_RESOURCES);
-    statistic_increment(aborted_connects,&LOCK_status);
-    MYSQL_CALLBACK(thread_scheduler, end_thread, (thd, 0));
-    delete thd;
-
-    return(NULL);
-  }
 
   thd->system_thread= SYSTEM_THREAD_SLAVE_SQL;
   thd->security_ctx->skip_grants();
@@ -1684,7 +1676,7 @@ pthread_handler_t start_wsrep_THD(void *arg)
   if (plugins_are_initialized)
   {
     net_end(&thd->net);
-    MYSQL_CALLBACK(thread_scheduler, end_thread, (thd, 1));
+    MYSQL_CALLBACK(extra_thread_scheduler, end_thread, (thd, 1));
   }
   else
   {
@@ -1694,13 +1686,6 @@ pthread_handler_t start_wsrep_THD(void *arg)
   }
 
   my_thread_end();
-  if (thread_handling > SCHEDULER_ONE_THREAD_PER_CONNECTION)
-  {
-    mysql_mutex_lock(&LOCK_thread_count);
-    delete thd;
-    thread_count--;
-    mysql_mutex_unlock(&LOCK_thread_count);
-  }
   return(NULL);
 }
 
@@ -1772,7 +1757,7 @@ static bool have_client_connections()
 static void wsrep_close_thread(THD *thd)
 {
   thd->killed= KILL_CONNECTION;
-  MYSQL_CALLBACK(thread_scheduler, post_kill_notification, (thd));
+  MYSQL_CALLBACK(extra_thread_scheduler, post_kill_notification, (thd));
   if (thd->mysys_var)
   {
     thd->mysys_var->abort=1;

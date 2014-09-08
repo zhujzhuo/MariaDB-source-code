@@ -5532,7 +5532,9 @@ err:
       res= 1;
   }
 
+#ifdef WITH_WSREP
 end:
+#endif
   DBUG_RETURN(res);
 }
 

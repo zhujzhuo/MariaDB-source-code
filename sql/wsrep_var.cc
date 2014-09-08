@@ -236,8 +236,9 @@ err:
 bool wsrep_provider_update (sys_var *self, THD* thd, enum_var_type type)
 {
   bool rcode= false;
-
   bool wsrep_on_saved= thd->variables.wsrep_on;
+  DBUG_ENTER("wsrep_provider_update");
+
   thd->variables.wsrep_on= false;
 
   WSREP_DEBUG("wsrep_provider_update: %s", wsrep_provider);
@@ -273,7 +274,7 @@ bool wsrep_provider_update (sys_var *self, THD* thd, enum_var_type type)
 
   refresh_provider_options();
 
-  return rcode;
+  DBUG_RETURN(rcode);
 }
 
 void wsrep_provider_init (const char* value)

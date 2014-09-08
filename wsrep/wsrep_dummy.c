@@ -16,6 +16,7 @@
 
 /*! @file Dummy wsrep API implementation. */
 
+#include <my_global.h>
 #include "wsrep_api.h"
 
 #include <errno.h>
@@ -278,8 +279,9 @@ static struct wsrep_stats_var dummy_stats[] = {
 
 static struct wsrep_stats_var* dummy_stats_get (wsrep_t* w)
 {
-    WSREP_DBUG_ENTER(w);
-    return dummy_stats;
+  DBUG_ENTER("dummy_stats_get");
+  WSREP_DBUG_ENTER(w);
+  DBUG_RETURN(dummy_stats);
 }
 
 static void dummy_stats_free (
@@ -390,18 +392,19 @@ static wsrep_t dummy_iface = {
 
 int wsrep_dummy_loader(wsrep_t* w)
 {
+  DBUG_ENTER("wsrep_dummy_loader");
     if (!w)
-        return EINVAL;
+      DBUG_RETURN(EINVAL);
 
     *w = dummy_iface;
 
     // allocate private context
     if (!(w->ctx = malloc(sizeof(wsrep_dummy_t))))
-        return ENOMEM;
+      DBUG_RETURN(ENOMEM);
 
     // initialize private context
     WSREP_DUMMY(w)->log_fn = NULL;
     WSREP_DUMMY(w)->options = NULL;
 
-    return 0;
+    DBUG_RETURN(0);
 }
