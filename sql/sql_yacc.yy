@@ -256,7 +256,6 @@ static bool maybe_start_compound_statement(THD *thd)
 
     Lex->sp_chistics.suid= SP_IS_NOT_SUID;
     Lex->sphead->set_body_start(thd, YYLIP->get_cpp_ptr());
-    Lex->sphead->m_sql_mode= thd->variables.sql_mode;
   }
   return 0;
 }
@@ -788,8 +787,10 @@ static void sp_create_assignment_lex(THD *thd, bool no_lookahead)
     lex->var_list.empty();
     lex->autocommit= 0;
     /* get_ptr() is only correct with no lookahead. */
-    DBUG_ASSERT(no_lookahead);
-    lex->sphead->m_tmp_query= lip->get_ptr();
+    if (no_lookahead)
+        lex->sphead->m_tmp_query= lip->get_ptr();
+    else
+        lex->sphead->m_tmp_query= lip->get_tok_end();
     /* Inherit from outer lex. */
     lex->option_type= old_lex->option_type;
   }
@@ -932,10 +933,10 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %parse-param { THD *thd }
 %lex-param { THD *thd }
 /*
-  Currently there are 163 shift/reduce conflicts.
+  Currently there are 164 shift/reduce conflicts.
   We should not introduce new conflicts any more.
 */
-%expect 163
+%expect 164
 
 /*
    Comments for TOKENS.
@@ -1481,6 +1482,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  STARTING
 %token  STARTS_SYM
 %token  START_SYM                     /* SQL-2003-R */
+%token  STATEMENT_SYM
 %token  STATS_AUTO_RECALC_SYM
 %token  STATS_PERSISTENT_SYM
 %token  STATS_SAMPLE_PAGES_SYM
@@ -14317,6 +14319,7 @@ keyword_sp:
         | SQL_NO_CACHE_SYM         {}
         | SQL_THREAD               {}
         | STARTS_SYM               {}
+        | STATEMENT_SYM            {}
         | STATUS_SYM               {}
         | STORAGE_SYM              {}
         | STRING_SYM               {}
@@ -14391,8 +14394,36 @@ set:
           }
           start_option_value_list
           {}
+        | SET STATEMENT_SYM
+          {
+            LEX *lex= Lex;
+            mysql_init_select(lex);
+            lex->sql_command= SQLCOM_SET_OPTION;
+            lex->autocommit= 0;
+          }
+          set_stmt_option_value_following_option_type_list
+          {
+            LEX *lex= Lex;
+            if (lex->table_or_sp_used())
+            {
+              my_error(ER_SUBQUERIES_NOT_SUPPORTED, MYF(0), "SET STATEMENT");
+              MYSQL_YYABORT;
+            }
+            lex->stmt_var_list= lex->var_list;
+            lex->var_list.empty();
+          }
+          FOR_SYM verb_clause
+	  {}
         ;
 
+set_stmt_option_value_following_option_type_list:
+       /*
+         Only system variables can be used here. If this condition is changed
+         please check careful code under lex->option_type == OPT_STATEMENT
+         condition on wrong type casts.
+       */
+          option_value_following_option_type
+        | set_stmt_option_value_following_option_type_list ',' option_value_following_option_type
 
 // Start of option value list
 start_option_value_list:
@@ -14497,20 +14528,29 @@ option_value_following_option_type:
           {
             LEX *lex= Lex;
 
-            if ($1.var && $1.var != trg_new_row_fake_var)
+            /*
+              Ignore SET STATEMENT variables list on slaves because system
+              variables are not replicated except certain variables set the
+              values of whose are written to binlog event header and nothing
+              additional is required to set them.
+            */
+            if (!thd->slave_thread)
             {
-              /* It is a system variable. */
-              if (set_system_variable(thd, &$1, lex->option_type, $3))
+              if ($1.var && $1.var != trg_new_row_fake_var)
+              {
+                /* It is a system variable. */
+                if (set_system_variable(thd, &$1, lex->option_type, $3))
+                  MYSQL_YYABORT;
+              }
+              else
+              {
+                /*
+                   Not in trigger assigning value to new row,
+                   and option_type preceding local variable is illegal.
+                 */
+                my_parse_error(ER(ER_SYNTAX_ERROR));
                 MYSQL_YYABORT;
-            }
-            else
-            {
-              /*
-                Not in trigger assigning value to new row,
-                and option_type preceding local variable is illegal.
-              */
-              my_parse_error(ER(ER_SYNTAX_ERROR));
-              MYSQL_YYABORT;
+              }
             }
           }
         ;

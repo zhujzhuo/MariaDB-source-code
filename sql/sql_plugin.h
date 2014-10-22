@@ -189,4 +189,12 @@ extern bool plugin_foreach_with_mask(THD *thd, plugin_foreach_func *func,
                                      int type, uint state_mask, void *arg);
 extern bool plugin_dl_foreach(THD *thd, const LEX_STRING *dl,
                               plugin_foreach_func *func, void *arg);
+
+/**
+  Create deep copy of system_variables instance.
+*/
+extern
+struct system_variables *
+copy_system_variables(const struct system_variables *src);
+extern void free_system_variables(struct system_variables *v);
 #endif
