@@ -87,6 +87,7 @@ protected:
   on_update_function on_update;
   const char *const deprecation_substitute;
   bool is_os_charset; ///< true if the value is in character_set_filesystem
+  bool default_val;
 
 public:
   sys_var(sys_var_chain *chain, const char *name_arg, const char *comment,
@@ -191,6 +192,8 @@ public:
     return insert_dynamic(array, (uchar*)&option);
   }
   void do_deprecated_warning(THD *thd);
+  bool is_default() { return default_val; }
+  void set_is_default(bool def) { default_val= def; }
 
   virtual uchar *default_value_ptr(THD *thd)
   { return (uchar*)&option.def_value; }
@@ -249,6 +252,7 @@ public:
   virtual int check(THD *thd)=0;           /* To check privileges etc. */
   virtual int update(THD *thd)=0;                  /* To set the value */
   virtual int light_check(THD *thd) { return check(thd); }   /* for PS */
+  virtual bool is_system() { return FALSE; }
 };
 
 
@@ -290,6 +294,7 @@ public:
     else
       value=value_arg;
   }
+  virtual bool is_system() { return 1; }
   int check(THD *thd);
   int update(THD *thd);
   int light_check(THD *thd);
@@ -388,7 +393,7 @@ SHOW_VAR* enumerate_sys_vars(THD *thd, bool sorted, enum enum_var_type type);
 int fill_sysvars(THD *thd, TABLE_LIST *tables, COND *cond);
 
 sys_var *find_sys_var(THD *thd, const char *str, uint length=0);
-int sql_set_variables(THD *thd, List<set_var_base> *var_list);
+int sql_set_variables(THD *thd, List<set_var_base> *var_list, bool free);
 
 #define SYSVAR_AUTOSIZE(VAR,VAL)                        \
   do {                                                  \
