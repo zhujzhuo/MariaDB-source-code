@@ -1040,3 +1040,15 @@ SELECT @@MAX_STATEMENT_TIME;
 0.000000
 SET STATEMENT keycache1.key_buffer_size=1024 FOR SELECT 1;
 ERROR HY000: Variable 'key_buffer_size' is a GLOBAL variable and should be set with SET GLOBAL
+set @save_general_log=@@general_log;
+# SET STATEMENT works (OK)
+set statement lock_wait_timeout=1 for select @@lock_wait_timeout;
+@@lock_wait_timeout
+1
+# Setting a totally unrelated global variable
+set global general_log=0;
+# SET STATEMENT should work
+set statement lock_wait_timeout=1 for select @@lock_wait_timeout;
+@@lock_wait_timeout
+1
+set global general_log=@save_general_log;

@@ -14398,6 +14398,7 @@ set:
           {
             LEX *lex= Lex;
             mysql_init_select(lex);
+            lex->option_type= OPT_SESSION;
             lex->sql_command= SQLCOM_SET_OPTION;
             lex->autocommit= 0;
           }
