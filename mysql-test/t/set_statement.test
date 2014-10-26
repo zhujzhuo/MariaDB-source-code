@@ -986,7 +986,7 @@ SET STATEMENT keycache1.key_buffer_size=1024 FOR SELECT 1;
 #
 # MDEV-6940: SET STATEMENT executed after SET GLOBAL does not work
 #
-set @save_general_log=@@general_log;
+set @save_general_log=@@global.general_log;
 --echo # SET STATEMENT works (OK)
 set statement lock_wait_timeout=1 for select @@lock_wait_timeout;
 --echo # Setting a totally unrelated global variable
