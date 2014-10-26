@@ -974,3 +974,11 @@ SHOW STATUS LIKE "max_statement_time_exceeded";
 SET STATEMENT MAX_STATEMENT_TIME=2 FOR SELECT SLEEP(3);
 SHOW STATUS LIKE "max_statement_time_exceeded";
 SELECT @@MAX_STATEMENT_TIME;
+
+#
+# MDEV-6946:Assertion `0' failed in mysql_execute_command on SET STATEMENT
+# keycache1.key_buffer_size=.. FOR
+#
+--error ER_GLOBAL_VARIABLE
+SET STATEMENT keycache1.key_buffer_size=1024 FOR SELECT 1;
+

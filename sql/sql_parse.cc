@@ -2650,7 +2650,7 @@ mysql_execute_command(THD *thd)
           o= new set_var(v->type, v->var, &v->base, NULL);
       else
       {
-        switch (v->var->option.var_type)
+        switch (v->var->option.var_type & GET_TYPE_MASK)
         {
         case GET_BOOL:
         case GET_INT:
@@ -2693,8 +2693,6 @@ mysql_execute_command(THD *thd)
           DBUG_ASSERT(0);
         case 0:
         case GET_FLAGSET:
-        case GET_ASK_ADDR:
-        case GET_TYPE_MASK:
         case GET_ENUM:
         case GET_SET:
         case GET_STR:
