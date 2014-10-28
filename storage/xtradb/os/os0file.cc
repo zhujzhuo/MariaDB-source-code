@@ -6655,7 +6655,7 @@ os_file_get_block_size(
 	DWORD NumberOfFreeClusters = 0;
 	DWORD TotalNumberOfClusters = 0;
 
-	if (GetFreeSpace((LPCTSTR)name, &SectorsPerCluster, &BytesPerSector.
+	if (GetFreeSpace((LPCTSTR)name, &SectorsPerCluster, &BytesPerSector,
 			&NumberOfFreeClusters, &TotalNumberOfClusters)) {
 		fblock_size = ByterPerSector;
 		fprintf(stderr, "InnoDB: [Note]: Using %ld file block size\n", fblock_size);
