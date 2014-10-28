@@ -6548,18 +6548,19 @@ os_file_get_block_size(
 	}
 #endif /* UNIV_LINUX */
 #ifdef __WIN__
-	DWORD SectorsPerCluster = 0;
-	DWORD BytesPerSector = 0;
-	DWORD NumberOfFreeClusters = 0;
-	DWORD TotalNumberOfClusters = 0;
+	{
+		DWORD SectorsPerCluster = 0;
+		DWORD BytesPerSector = 0;
+		DWORD NumberOfFreeClusters = 0;
+		DWORD TotalNumberOfClusters = 0;
 
-	if (GetFreeSpace((LPCTSTR)name, &SectorsPerCluster, &BytesPerSector,
-			&NumberOfFreeClusters, &TotalNumberOfClusters)) {
-		fblock_size = ByterPerSector;
-		fprintf(stderr, "InnoDB: [Note]: Using %ld file block size\n", fblock_size);
-	} else {
-		fprintf(stderr, "InnoDB: Warning: GetFreeSpace() failed on file %s\n", name);
-		os_file_handle_error_no_exit(name, "GetFreeSpace()", FALSE, __FILE__, __LINE__);
+		if (GetFreeSpace((LPCTSTR)name, &SectorsPerCluster, &BytesPerSector, &NumberOfFreeClusters, &TotalNumberOfClusters)) {
+			fblock_size = ByterPerSector;
+			fprintf(stderr, "InnoDB: [Note]: Using %ld file block size\n", fblock_size);
+		} else {
+			fprintf(stderr, "InnoDB: Warning: GetFreeSpace() failed on file %s\n", name);
+			os_file_handle_error_no_exit(name, "GetFreeSpace()", FALSE, __FILE__, __LINE__);
+		}
 	}
 #endif /* __WIN__*/
 
