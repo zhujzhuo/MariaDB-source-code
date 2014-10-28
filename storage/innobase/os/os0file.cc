@@ -6555,7 +6555,7 @@ os_file_get_block_size(
 		DWORD TotalNumberOfClusters = 0;
 
 		if (GetFreeSpace((LPCTSTR)name, &SectorsPerCluster, &BytesPerSector, &NumberOfFreeClusters, &TotalNumberOfClusters)) {
-			fblock_size = ByterPerSector;
+			fblock_size = BytesPerSector;
 			fprintf(stderr, "InnoDB: [Note]: Using %ld file block size\n", fblock_size);
 		} else {
 			fprintf(stderr, "InnoDB: Warning: GetFreeSpace() failed on file %s\n", name);
