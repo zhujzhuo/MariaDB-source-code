@@ -994,3 +994,21 @@ set global general_log=0;
 --echo # SET STATEMENT should work
 set statement lock_wait_timeout=1 for select @@lock_wait_timeout;
 set global general_log=@save_general_log;
+
+#
+# Prohibited Variables
+#
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement autocommit=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement gtid_domain_id=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement tx_isolation=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement rand_seed1=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement rand_seed2=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement skip_replication=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement default_master_connection=default for select 1;

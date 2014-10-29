@@ -61,7 +61,8 @@ public:
   sys_var *next;
   LEX_CSTRING name;
   enum flag_enum { GLOBAL, SESSION, ONLY_SESSION, SCOPE_MASK=1023,
-                   READONLY=1024, ALLOCATED=2048, PARSE_EARLY=4096 };
+                   READONLY=1024, ALLOCATED=2048, PARSE_EARLY=4096,
+                   NO_SET_STATEMENT=8192};
   enum { NO_GETOPT=-1, GETOPT_ONLY_HELP=-2 };
   enum where { CONFIG, AUTO, SQL, COMPILE_TIME, ENV };
 
@@ -134,6 +135,7 @@ public:
     that support the syntax @@keycache_name.variable_name
   */
   bool is_struct() { return option.var_type & GET_ASK_ADDR; }
+  bool is_set_stmt_ok() const { return !(flags & NO_SET_STATEMENT); }
   bool is_written_to_binlog(enum_var_type type)
   { return type != OPT_GLOBAL && binlog_status == SESSION_VARIABLE_IN_BINLOG; }
   bool check_update_type(Item_result type)

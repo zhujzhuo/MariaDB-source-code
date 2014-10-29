@@ -997,7 +997,7 @@ static bool check_master_connection(sys_var *self, THD *thd, set_var *var)
 static Sys_var_session_lexstring Sys_default_master_connection(
        "default_master_connection",
        "Master connection to use for all slave variables and slave commands",
-       SESSION_ONLY(default_master_connection),
+       NO_SET_STMT SESSION_ONLY(default_master_connection),
        NO_CMD_LINE, IN_SYSTEM_CHARSET,
        DEFAULT(""), MAX_CONNECTION_NAME, ON_CHECK(check_master_connection));
 #endif
@@ -1437,7 +1437,7 @@ static Sys_var_uint Sys_gtid_domain_id(
        "parallel paths (for example multiple masters), each independent "
        "source server must use a distinct domain_id. For simple tree-shaped "
        "replication topologies, it can be left at its default, 0.",
-       SESSION_VAR(gtid_domain_id),
+       NO_SET_STMT SESSION_VAR(gtid_domain_id),
        CMD_LINE(REQUIRED_ARG), VALID_RANGE(0, UINT_MAX32), DEFAULT(0),
        BLOCK_SIZE(1), NO_MUTEX_GUARD, NOT_IN_BINLOG,
        ON_CHECK(check_gtid_domain_id));
@@ -3192,7 +3192,7 @@ static bool check_tx_isolation(sys_var *self, THD *thd, set_var *var)
 // NO_CMD_LINE - different name of the option
 static Sys_var_tx_isolation Sys_tx_isolation(
        "tx_isolation", "Default transaction isolation level",
-       SESSION_VAR(tx_isolation), NO_CMD_LINE,
+       NO_SET_STMT SESSION_VAR(tx_isolation), NO_CMD_LINE,
        tx_isolation_names, DEFAULT(ISO_REPEATABLE_READ),
        NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(check_tx_isolation));
 
@@ -3407,7 +3407,8 @@ static bool fix_autocommit(sys_var *self, THD *thd, enum_var_type type)
 
 static Sys_var_bit Sys_autocommit(
        "autocommit", "autocommit",
-       SESSION_VAR(option_bits), NO_CMD_LINE, OPTION_AUTOCOMMIT, DEFAULT(TRUE),
+       NO_SET_STMT SESSION_VAR(option_bits), NO_CMD_LINE,
+       OPTION_AUTOCOMMIT, DEFAULT(TRUE),
        NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(0), ON_UPDATE(fix_autocommit));
 export sys_var *Sys_autocommit_ptr= &Sys_autocommit; // for sql_yacc.yy
 
@@ -3527,12 +3528,12 @@ static Sys_var_bit Sys_unique_checks(
 #ifdef ENABLED_PROFILING
 static Sys_var_bit Sys_profiling(
        "profiling", "profiling",
-       SESSION_VAR(option_bits), NO_CMD_LINE, OPTION_PROFILING,
+       NO_SET_STMT SESSION_VAR(option_bits), NO_CMD_LINE, OPTION_PROFILING,
        DEFAULT(FALSE));
 
 static Sys_var_ulong Sys_profiling_history_size(
        "profiling_history_size", "Limit of query profiling memory",
-       SESSION_VAR(profiling_history_size), CMD_LINE(REQUIRED_ARG),
+       NO_SET_STMT SESSION_VAR(profiling_history_size), CMD_LINE(REQUIRED_ARG),
        VALID_RANGE(0, 100), DEFAULT(15), BLOCK_SIZE(1));
 #endif
 
@@ -3566,7 +3567,8 @@ static bool check_skip_replication(sys_var *self, THD *thd, set_var *var)
 
 static Sys_var_bit Sys_skip_replication(
        "skip_replication", "skip_replication",
-       SESSION_ONLY(option_bits), NO_CMD_LINE, OPTION_SKIP_REPLICATION,
+       NO_SET_STMT SESSION_ONLY(option_bits),
+       NO_CMD_LINE, OPTION_SKIP_REPLICATION,
        DEFAULT(FALSE), NO_MUTEX_GUARD, NOT_IN_BINLOG,
        ON_CHECK(check_skip_replication));
 
@@ -3688,7 +3690,7 @@ static ulonglong read_rand_seed(THD *thd)
 static Sys_var_session_special Sys_rand_seed1(
        "rand_seed1", "Sets the internal state of the RAND() "
        "generator for replication purposes",
-       sys_var::ONLY_SESSION, NO_CMD_LINE,
+       NO_SET_STMT sys_var::ONLY_SESSION, NO_CMD_LINE,
        VALID_RANGE(0, ULONG_MAX), BLOCK_SIZE(1),
        NO_MUTEX_GUARD, IN_BINLOG, ON_CHECK(0),
        ON_UPDATE(update_rand_seed1), ON_READ(read_rand_seed));
@@ -3706,7 +3708,7 @@ static bool update_rand_seed2(THD *thd, set_var *var)
 static Sys_var_session_special Sys_rand_seed2(
        "rand_seed2", "Sets the internal state of the RAND() "
        "generator for replication purposes",
-       sys_var::ONLY_SESSION, NO_CMD_LINE,
+       NO_SET_STMT sys_var::ONLY_SESSION, NO_CMD_LINE,
        VALID_RANGE(0, ULONG_MAX), BLOCK_SIZE(1),
        NO_MUTEX_GUARD, IN_BINLOG, ON_CHECK(0),
        ON_UPDATE(update_rand_seed2), ON_READ(read_rand_seed));

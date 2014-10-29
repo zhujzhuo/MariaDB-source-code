@@ -2646,6 +2646,11 @@ mysql_execute_command(THD *thd)
     {
       DBUG_ASSERT(var->is_system());
       set_var *o= NULL, *v= (set_var*)var;
+      if (!v->var->is_set_stmt_ok())
+      {
+        my_error(ER_SET_STATEMENT_NOT_SUPPORTED, MYF(0), v->var->name.str);
+        goto error;
+      }
       if (v->var->is_default())
           o= new set_var(v->type, v->var, &v->base, NULL);
       else
