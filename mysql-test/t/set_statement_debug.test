@@ -1,4 +1,5 @@
 --source include/have_debug.inc
+--source include/have_debug_sync.inc
 
 set @save_debug_dbug= @@debug_dbug;
 
@@ -18,3 +19,6 @@ SELECT * FROM t1 ORDER BY f1 ASC, f0;
 
 DROP TABLE t1;
 set @@debug_dbug= @save_debug_dbug;
+
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement DEBUG_SYNC = 'now SIGNAL hi' for select 1;

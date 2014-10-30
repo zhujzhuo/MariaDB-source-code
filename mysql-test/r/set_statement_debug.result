@@ -18,3 +18,5 @@ f0	f1
 6	5
 DROP TABLE t1;
 set @@debug_dbug= @save_debug_dbug;
+set statement DEBUG_SYNC = 'now SIGNAL hi' for select 1;
+ERROR 42000: The system variable debug_sync cannot be set in SET STATEMENT.

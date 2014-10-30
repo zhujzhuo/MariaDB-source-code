@@ -3321,7 +3321,7 @@ static Sys_var_plugin Sys_default_tmp_storage_engine(
 */
 static Sys_var_debug_sync Sys_debug_sync(
        "debug_sync", "Debug Sync Facility",
-       sys_var::ONLY_SESSION, NO_CMD_LINE,
+       NO_SET_STMT sys_var::ONLY_SESSION, NO_CMD_LINE,
        DEFAULT(0), NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(check_has_super));
 #endif /* defined(ENABLED_DEBUG_SYNC) */
 
