@@ -1053,16 +1053,16 @@ set statement lock_wait_timeout=1 for select @@lock_wait_timeout;
 1
 set global general_log=@save_general_log;
 set statement autocommit=default for select 1;
-ERROR 42000: Variable 'autocommit' is not supported in SET STATEMENT.
+ERROR 42000: The system variable autocommit cannot be set in SET STATEMENT.
 set statement gtid_domain_id=default for select 1;
-ERROR 42000: Variable 'gtid_domain_id' is not supported in SET STATEMENT.
+ERROR 42000: The system variable gtid_domain_id cannot be set in SET STATEMENT.
 set statement tx_isolation=default for select 1;
-ERROR 42000: Variable 'tx_isolation' is not supported in SET STATEMENT.
+ERROR 42000: The system variable tx_isolation cannot be set in SET STATEMENT.
 set statement rand_seed1=default for select 1;
-ERROR 42000: Variable 'rand_seed1' is not supported in SET STATEMENT.
+ERROR 42000: The system variable rand_seed1 cannot be set in SET STATEMENT.
 set statement rand_seed2=default for select 1;
-ERROR 42000: Variable 'rand_seed2' is not supported in SET STATEMENT.
+ERROR 42000: The system variable rand_seed2 cannot be set in SET STATEMENT.
 set statement skip_replication=default for select 1;
-ERROR 42000: Variable 'skip_replication' is not supported in SET STATEMENT.
+ERROR 42000: The system variable skip_replication cannot be set in SET STATEMENT.
 set statement default_master_connection=default for select 1;
-ERROR 42000: Variable 'default_master_connection' is not supported in SET STATEMENT.
+ERROR 42000: The system variable default_master_connection cannot be set in SET STATEMENT.

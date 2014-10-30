@@ -7114,4 +7114,4 @@ ER_STATEMENT_TIMEOUT 70100
 ER_SUBQUERIES_NOT_SUPPORTED 42000
         eng "%s does not support subqueries or stored functions."
 ER_SET_STATEMENT_NOT_SUPPORTED 42000
-        eng "Variable '%s' is not supported in SET STATEMENT."
+        eng "The system variable %.200s cannot be set in SET STATEMENT." 
