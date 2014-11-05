@@ -1066,3 +1066,37 @@ set statement skip_replication=default for select 1;
 ERROR 42000: The system variable skip_replication cannot be set in SET STATEMENT.
 set statement default_master_connection=default for select 1;
 ERROR 42000: The system variable default_master_connection cannot be set in SET STATEMENT.
+set statement default_master_connection=default for select 1;
+ERROR 42000: The system variable default_master_connection cannot be set in SET STATEMENT.
+set statement last_insert_id=1 for select 1;
+ERROR 42000: The system variable last_insert_id cannot be set in SET STATEMENT.
+set statement sql_log_off=default for select 1;
+ERROR 42000: The system variable sql_log_off cannot be set in SET STATEMENT.
+set statement long_query_time=default for select 1;
+ERROR 42000: The system variable long_query_time cannot be set in SET STATEMENT.
+set statement log_slow_filter=default for select 1;
+ERROR 42000: The system variable log_slow_filter cannot be set in SET STATEMENT.
+set statement log_slow_verbosity=default for select 1;
+ERROR 42000: The system variable log_slow_verbosity cannot be set in SET STATEMENT.
+set statement log_slow_rate_limit=default for select 1;
+ERROR 42000: The system variable log_slow_rate_limit cannot be set in SET STATEMENT.
+set statement slow_query_log=default for select 1;
+ERROR 42000: The system variable slow_query_log cannot be set in SET STATEMENT.
+set statement min_examined_row_limit=default for select 1;
+ERROR 42000: The system variable min_examined_row_limit cannot be set in SET STATEMENT.
+set statement character_set_client=default for select 1;
+ERROR 42000: The system variable character_set_client cannot be set in SET STATEMENT.
+set statement character_set_connection=default for select 1;
+ERROR 42000: The system variable character_set_connection cannot be set in SET STATEMENT.
+set statement character_set_filesystem=default for select 1;
+ERROR 42000: The system variable character_set_filesystem cannot be set in SET STATEMENT.
+set statement collation_connection=default for select 1;
+ERROR 42000: The system variable collation_connection cannot be set in SET STATEMENT.
+set statement old_passwords=default for select 1;
+ERROR 42000: The system variable old_passwords cannot be set in SET STATEMENT.
+set statement query_cache_type=default for select 1;
+ERROR 42000: The system variable query_cache_type cannot be set in SET STATEMENT.
+set statement wait_timeout=default for select 1;
+ERROR 42000: The system variable wait_timeout cannot be set in SET STATEMENT.
+set statement interactive_timeout=default for select 1;
+ERROR 42000: The system variable interactive_timeout cannot be set in SET STATEMENT.

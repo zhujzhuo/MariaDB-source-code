@@ -1012,3 +1012,38 @@ set statement rand_seed2=default for select 1;
 set statement skip_replication=default for select 1;
 --error ER_SET_STATEMENT_NOT_SUPPORTED
 set statement default_master_connection=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement default_master_connection=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement last_insert_id=1 for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement sql_log_off=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement long_query_time=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement log_slow_filter=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement log_slow_verbosity=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement log_slow_rate_limit=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement slow_query_log=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement min_examined_row_limit=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement character_set_client=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement character_set_connection=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement character_set_filesystem=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement collation_connection=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement old_passwords=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement query_cache_type=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement wait_timeout=default for select 1;
+--error ER_SET_STATEMENT_NOT_SUPPORTED
+set statement interactive_timeout=default for select 1;
+
