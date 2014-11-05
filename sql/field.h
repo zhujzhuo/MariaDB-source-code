@@ -318,11 +318,20 @@ public:
     this info anywhere except unireg_check field. This issue will be resolved
     in more clean way with transition to new text based .frm format.
     See also comment for Field_timestamp::Field_timestamp().
+
+    Note that utype constants are written into frm and their values cannot
+    be changed without breaking frm compatibility.
   */
-  enum utype  { NONE,DATE,SHIELD,NOEMPTY,CASEUP,PNR,BGNR,PGNR,YES,NO,REL,
-		CHECK,EMPTY,UNKNOWN_FIELD,CASEDN,NEXT_NUMBER,INTERVAL_FIELD,
-                BIT_FIELD, TIMESTAMP_OLD_FIELD, CAPITALIZE, BLOB_FIELD,
-                TIMESTAMP_DN_FIELD, TIMESTAMP_UN_FIELD, TIMESTAMP_DNUN_FIELD};
+  enum utype  { NONE= 0,
+                NEXT_NUMBER=15,
+                INTERVAL_FIELD=16,
+                BIT_FIELD=17,
+                TIMESTAMP_OLD_FIELD=18,
+                BLOB_FIELD=20,
+                TIMESTAMP_DN_FIELD= 21,
+                TIMESTAMP_UN_FIELD= 22,
+                TIMESTAMP_DNUN_FIELD= 23};
+
   enum geometry_type
   {
     GEOM_GEOMETRY = 0, GEOM_POINT = 1, GEOM_LINESTRING = 2, GEOM_POLYGON = 3,
