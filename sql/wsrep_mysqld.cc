@@ -153,6 +153,8 @@ static PSI_cond_info wsrep_conds[]=
   { &key_COND_wsrep_replaying, "COND_wsrep_replaying", PSI_FLAG_GLOBAL}
 };
 #else
+#undef mysql_mutex_register
+#undef mysql_cond_register
 #define mysql_mutex_register(X,Y,Z)
 #define mysql_cond_register(X,Y,Z)
 #endif
