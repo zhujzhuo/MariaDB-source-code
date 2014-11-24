@@ -6395,6 +6395,7 @@ os_file_trim(
 	if (ret) {
 		/* After first failure do not try to trim again */
 		os_fallocate_failed = TRUE;
+		srv_use_trim = FALSE;
 		ut_print_timestamp(stderr);
 		fprintf(stderr,
 			"  InnoDB: [Warning] fallocate call failed with error code %d.\n"
@@ -6421,6 +6422,7 @@ os_file_trim(
 		"  InnoDB: [Warning] fallocate not supported on this installation."
 		"  InnoDB: Disabling fallocate for now.");
 	os_fallocate_failed = TRUE;
+	srv_file_trim = FALSE;
 	if (slot->write_size) {
 		*slot->write_size = 0;
 	}
@@ -6440,6 +6442,7 @@ os_file_trim(
 	if (!ret) {
 		/* After first failure do not try to trim again */
 		os_fallocate_failed = TRUE;
+		srv_file_trim=FALSE;
 		ut_print_timestamp(stderr);
 		fprintf(stderr,
 			"  InnoDB: [Warning] fallocate call failed with error.\n"
