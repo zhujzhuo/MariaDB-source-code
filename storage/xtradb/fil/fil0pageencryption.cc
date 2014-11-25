@@ -207,7 +207,7 @@ fil_encrypt_page(
 	}
 
 	if (FIL_PAGE_PAGE_COMPRESSED == orig_page_type) {
-		page_len = log10(len)/log10(2);
+		page_len = log10((double)len)/log10((double)2);
 	}
 
 	byte checksum_byte = fil_page_encryption_calc_checksum(buf + FIL_PAGE_DATA, len - FIL_PAGE_DATA);
