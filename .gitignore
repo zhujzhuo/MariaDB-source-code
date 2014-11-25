@@ -1,3 +1,11 @@
+.cproject
+.project
+Debug/*
+pcre/*
+pcre3/*
+_32/*
+_64/*
+bld/*
 *-t
 *.a
 *.ctest
