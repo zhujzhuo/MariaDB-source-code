@@ -3267,7 +3267,7 @@ try_again:
 	if (ret && len == n) {
 
 		if (fil_page_is_encrypted((byte *)buf)) {
-			if (fil_decrypt_page(NULL, (byte *)buf, n, NULL, &compressed, 0)) {
+			if (fil_decrypt_page(NULL, (byte *)buf, n, NULL, &compressed, NULL, 0)) {
 				return (FALSE);
 			}
 		}

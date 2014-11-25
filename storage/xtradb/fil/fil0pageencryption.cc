@@ -434,7 +434,7 @@ fil_decrypt_page(
 			*page_compressed = 1L;
 		}
 		page_compression_flag = 1;
-		len = pow(2, mach_read_from_1(buf + FIL_PAGE_SPACE_OR_CHKSUM + 3));
+		len = pow((double)2, (double)mach_read_from_1(buf + FIL_PAGE_SPACE_OR_CHKSUM + 3));
 		offset = 0;
 	}
 
