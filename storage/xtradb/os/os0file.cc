@@ -3141,8 +3141,7 @@ try_again:
 		if (fil_page_is_encrypted((byte *)buf)) {
 			if (fil_decrypt_page(
 					NULL
-					(byte *)
-					buf,
+					(byte *)buf,
 					n,
 					NULL,
 					&compressed,

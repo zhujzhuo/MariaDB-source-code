@@ -237,6 +237,12 @@ fil_encrypt_page(
 	} else {
 		char* keyString = keys.getKeys(encryption_key)->key;
 		char* ivString = keys.getKeys(encryption_key)->iv;
+
+		if (keyString == NULL || ivString == NULL) {
+			*errorCode = PAGE_ENCRYPTION_WILL_NOT_ENCRYPT;
+			*out_len = len;
+			return (buf);
+		}
 		key_len = strlen(keyString)/2;
 		my_aes_hexToUint(keyString, (unsigned char*)&rkey, key_len);
 		my_aes_hexToUint(ivString, (unsigned char*)&iv, 16);
@@ -463,6 +469,10 @@ fil_decrypt_page(
 		char* keyString = keys.getKeys(page_decryption_key)->key;
 		char* ivString = keys.getKeys(page_decryption_key)->iv;
 		key_len = strlen(keyString)/2;
+		if (keyString == NULL || ivString == NULL) {
+			return err;
+		}
+
 		my_aes_hexToUint(keyString, (unsigned char*)&rkey, key_len);
 		my_aes_hexToUint(ivString, (unsigned char*)&iv, 16);
 	}
