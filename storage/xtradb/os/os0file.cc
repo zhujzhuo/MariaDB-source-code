@@ -3137,8 +3137,16 @@ try_again:
 	os_mutex_exit(os_file_count_mutex);
 
 	if (ret && len == n) {
+		/* If page is encrypted we need to decrypt it first */
 		if (fil_page_is_encrypted((byte *)buf)) {
-			if (fil_decrypt_page(NULL, (byte *)buf, n, NULL, &compressed, NULL, 0)) {
+			if (fil_decrypt_page(
+					NULL
+					(byte *)
+					buf,
+					n,
+					NULL,
+					&compressed,
+					NULL)) {
 				return FALSE;
 			}
 		}
@@ -3162,8 +3170,15 @@ try_again:
 	ret = os_file_pread(file, buf, n, offset, trx);
 
 	if ((ulint) ret == n) {
+		/* If page is encrypted we need to decrypt it first */
 		if (fil_page_is_encrypted((byte *)buf)) {
-			if (fil_decrypt_page(NULL, (byte *)buf, n, NULL, &compressed, NULL, 0)) {
+			if (fil_decrypt_page(
+					NULL,
+					(byte *)buf,
+					n,
+					NULL,
+					&compressed,
+					NULL)) {
 				return FALSE;
 			}
 		}
@@ -3265,9 +3280,15 @@ try_again:
 	os_mutex_exit(os_file_count_mutex);
 
 	if (ret && len == n) {
-
+		/* If page is encrypted we need to decrypt it first */
 		if (fil_page_is_encrypted((byte *)buf)) {
-			if (fil_decrypt_page(NULL, (byte *)buf, n, NULL, &compressed, NULL, 0)) {
+			if (fil_decrypt_page(
+					NULL,
+					(byte *)buf,
+					n,
+					NULL,
+					&compressed,
+					NULL)) {
 				return (FALSE);
 			}
 		}
@@ -3292,8 +3313,15 @@ try_again:
 
 	if ((ulint) ret == n) {
 
+		/* If the page is encrypted we need to decrypt it first */
 		if (fil_page_is_encrypted((byte *)buf)) {
-			if (fil_decrypt_page(NULL, (byte *)buf, n, NULL, &compressed, NULL, 0)) {
+			if (fil_decrypt_page(
+					NULL,
+					(byte *)buf,
+					n,
+					NULL,
+					&compressed,
+					NULL)) {
 				return (FALSE);
 			}
 		}
@@ -4832,7 +4860,8 @@ found:
 #endif
 
 		/* Call page compression */
-		tmp = fil_compress_page(fil_node_get_space_id(slot->message1),
+		tmp = fil_compress_page(
+			fil_node_get_space_id(slot->message1),
 			(byte *)buf,
 			slot->page_buf,
 			len,
@@ -4880,8 +4909,7 @@ found:
 			page_encryption_key,
 			&real_len,
 			&ec,
-			slot->tmp_encryption_buf,
-			0);
+			slot->tmp_encryption_buf);
 
 		/* If encryption succeeded, set up the length and buffer */
 		if (tmp != buf) {
@@ -5190,10 +5218,10 @@ os_aio_func(
 						 to be used */
 
 {
-	void* buffer = NULL;
 	os_aio_array_t*	array;
 	os_aio_slot_t*	slot;
 #ifdef WIN_ASYNC_IO
+	void* buffer = NULL;
 	DWORD		len		= (DWORD) n;
 	BOOL	ret;
 #endif
@@ -5545,8 +5573,7 @@ os_aio_windows_handle(
 					slot->len,
 					slot->write_size,
 					NULL,
-					slot->tmp_encryption_buf,
-					0);
+					slot->tmp_encryption_buf);
 			}
 		}
 	}
@@ -5560,9 +5587,14 @@ os_aio_windows_handle(
 		}
 #endif
 	        if (slot->type == OS_FILE_READ) {
-			fil_decompress_page(slot->page_buf, slot->buf, slot->len, slot->write_size);
+			fil_decompress_page(
+				slot->page_buf,
+				slot->buf,
+				slot->len,
+				slot->write_size);
 		} else {
-			if (slot->page_compression_success && fil_page_is_compressed(slot->page_buf)) {
+			if (slot->page_compression_success
+			    && fil_page_is_compressed(slot->page_buf)) {
 				if (srv_use_trim && os_fallocate_failed == FALSE) {
 					// Deallocate unused blocks from file system
 					os_file_trim(slot);
@@ -5672,8 +5704,7 @@ retry:
 							slot->len,
 							slot->write_size,
 							NULL,
-							slot->tmp_encryption_buf,
-							0);
+							slot->tmp_encryption_buf);
 					}
 				}
 			}
@@ -5692,7 +5723,11 @@ retry:
 				}
 #endif
 				if (slot->type == OS_FILE_READ) {
-					fil_decompress_page(slot->page_buf, slot->buf, slot->len, slot->write_size);
+					fil_decompress_page(
+						slot->page_buf,
+						slot->buf,
+						slot->len,
+						slot->write_size);
 				} else {
 					if (slot->page_compression_success &&
 					    fil_page_is_compressed(slot->page_buf)) {

@@ -82,8 +82,7 @@ fil_encrypt_page(
 	ulint 		encryption_key, /*!< in: encryption key */
 	ulint* 		out_len, 	/*!< out: actual length of encrypted page */
 	ulint* 		errorCode, 	/*!< out: an error code. set, if page is intentionally not encrypted */
-	byte*  		tmp_encryption_buf, /*!< in: temporary buffer or NULL */
-	ulint 		mode); 		/*!< in: calling mode. Should be 0. Can be used for unit tests */
+	byte*  		tmp_encryption_buf); /*!< in: temporary buffer or NULL */
 
 /****************************************************************//**
 For page encrypted pages decrypt the page after actual read
@@ -98,8 +97,6 @@ fil_decrypt_page(
 	ulint 		len, 		/*!< in: length buffer, which should be decrypted.*/
 	ulint* 		write_size, 	/*!< out: size of the decrypted data. If no error occurred equal to len */
 	ibool* 		page_compressed,/*!<out: is page compressed.*/
-	byte*  		tmp_encryption_buf, /*!< in: temporary buffer or NULL */
-	ulint 		mode);		/*!< in: calling mode. Should be 0. Can be used for unit tests */
-
+	byte*  		tmp_encryption_buf); /*!< in: temporary buffer or NULL */
 
 #endif // fil0pageencryption_h
