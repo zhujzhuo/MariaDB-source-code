@@ -4884,14 +4884,15 @@ found:
 			0);
 
 		/* If encryption succeeded, set up the length and buffer */
-		if (tmp != buf || (ec == PAGE_ENCRYPTION_WILL_NOT_ENCRYPT)) {
+		if (tmp != buf) {
 			len = real_len;
 			buf = slot->page_buf2;
 			slot->len = real_len;
 			slot->page_encryption_success = TRUE;
 		} else {
+			/* Use original not encrypted page */
 			slot->page_encryption_success = FALSE;
-			ut_error;
+			buf = slot->buf;
 		}
 
 		/* Take array mutex back */
@@ -4925,11 +4926,7 @@ found:
 		io_prep_pread(iocb, file, buf, len, aio_offset);
 	} else {
 		ut_a(type == OS_FILE_WRITE);
-		if (page_encryption && !slot->page_encryption_success) {
-			ut_error;
-		} else {
-			io_prep_pwrite(iocb, file, buf, len, aio_offset);
-		}
+		io_prep_pwrite(iocb, file, buf, len, aio_offset);
 	}
 
 	iocb->data = (void*) slot;
@@ -5327,14 +5324,11 @@ try_again:
 		if (srv_use_native_aio) {
 			os_n_file_writes++;
 #ifdef WIN_ASYNC_IO
-			if (page_encryption) {
-				if (!slot->page_encryption_success) {
-					goto err_exit;
-				}
+			if (page_encryption && slot->page_encryption_success) {
 				buffer = slot->page_buf2;
 				n = slot->len;
 			} else {
-				if (page_compression && slot->page_buf) {
+				if (page_compression && slot->page_compression_success) {
 					buffer = slot->page_buf;
 					n = slot->len;
 				} else {
@@ -5499,11 +5493,11 @@ os_aio_windows_handle(
 
 		switch (slot->type) {
 		case OS_FILE_WRITE:
-			if (slot->message1 && slot->page_encryption && slot->page_buf2) {
+			if (slot->message1 && slot->page_encryption && slot->page_encryption_success) {
 				ret_val = os_file_write(slot->name, slot->file, slot->page_buf2,
 					                slot->offset, slot->len);
 			} else {
-				if (slot->message1 && slot->page_compression && slot->page_buf) {
+				if (slot->message1 && slot->page_compression && slot->page_compression_success) {
 					ret_val = os_file_write(slot->name, slot->file, slot->page_buf,
 						                slot->offset, slot->len);
 				} else {
@@ -6839,7 +6833,7 @@ os_slot_alloc_tmp_encryption_buf(
 {
 	ut_a(slot != NULL);
 	if (slot->tmp_encryption_buf == NULL) {
-		slot->tmp_encryption_buf = static_cast<byte *>(ut_malloc(UNIV_PAGE_SIZE + 64));
+		slot->tmp_encryption_buf = static_cast<byte *>(ut_malloc(64));
 	}
 }
 

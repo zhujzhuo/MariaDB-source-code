@@ -20,7 +20,8 @@ this program; if not, write to the Free Software Foundation, Inc.,
  @file fil/fil0pageencryption.cc
  Implementation for page encryption file spaces.
 
- Created 08/25/2014
+ Created  08/25/2014 Ludger Göckel eperi-GmbH
+ Modified 11/26/2014 Jan Lindström MariaDB Corporation
  ***********************************************************************/
 
 #include "fil0fil.h"
@@ -34,7 +35,6 @@ this program; if not, write to the Free Software Foundation, Inc.,
 #include <my_aes.h>
 #include <KeySingleton.h>
 #include <math.h>
-
 
 /*
  * derived from libFLAC, which is gpl v2
@@ -56,7 +56,9 @@ byte crc_table[] = {
 
 };
 
-/* this calculates a crc-8 checksum byte */
+/****************************************************************//**
+Calculate checksum for encrypted pages
+@return checksum */
 static
 byte
 fil_page_encryption_calc_checksum(
@@ -71,7 +73,8 @@ fil_page_encryption_calc_checksum(
         return crc;
 }
 
-/* recalculate check sum  - from buf0flu.cc*/
+/****************************************************************//**
+Recalculate checksum for encrypted pages */
 static
 void
 do_check_sum(
@@ -102,7 +105,6 @@ do_check_sum(
 		break;
 	case SRV_CHECKSUM_ALGORITHM_NONE:
 	case SRV_CHECKSUM_ALGORITHM_STRICT_NONE:
-
 		checksum = BUF_NO_CHECKSUM_MAGIC;
 		break;
 		/* no default so the compiler will emit a warning if new enum
@@ -148,7 +150,9 @@ do_check_sum(
  For page compressed table pages the log base 2 of the length of the
  encrypted data is stored.
 
- @return encrypted page or original page if encryption failed to be written*/
+ @return encrypted page or original page if encryption failed to be
+ written*/
+UNIV_INTERN
 byte*
 fil_encrypt_page(
 /*==============*/
@@ -160,7 +164,7 @@ fil_encrypt_page(
 	ulint 		encryption_key, /*!< in: encryption key */
 	ulint* 		out_len, 	/*!< out: actual length of encrypted page */
 	ulint* 		errorCode, 	/*!< out: an error code. set, if page is intentionally not encrypted */
-	byte*  		tmp_encryption_buf, /*!< in: temorary buffer or NULL */
+	byte*  		tmp_encryption_buf, /*!< in: temporary buffer or NULL */
 	ulint 		mode) 		/*!< in: calling mode. Should be 0. Can be used for unit tests */
 {
 
@@ -200,10 +204,9 @@ fil_encrypt_page(
 
 	/* Do not encrypt file space header or extend descriptor */
 	if ((orig_page_type == FIL_PAGE_TYPE_FSP_HDR) || (orig_page_type == FIL_PAGE_TYPE_XDES) ) {
-		memcpy(out_buf, buf, len);
-
 		*errorCode = PAGE_ENCRYPTION_WILL_NOT_ENCRYPT;
-		return (out_buf);
+		*out_len = len;
+		return (buf);
 	}
 
 	if (FIL_PAGE_PAGE_COMPRESSED == orig_page_type) {
@@ -266,7 +269,9 @@ fil_encrypt_page(
 			/* copy remaining bytes from input buffer to output buffer.
 			 * Note, that this copies the final 8 bytes of a page, which consists of the
 			 * Old-style checksum and the "Low 32 bits of LSN */
-			memcpy(out_buf + FIL_PAGE_DATA + data_size , buf + FIL_PAGE_DATA + data_size , len - FIL_PAGE_DATA -data_size);
+			memcpy(out_buf + FIL_PAGE_DATA + data_size,
+			       buf + FIL_PAGE_DATA + data_size ,
+			       len - FIL_PAGE_DATA -data_size);
 
 			if (tmp_encryption_buf == NULL) {
 				//create temporary buffer for 2nd encryption
@@ -275,7 +280,7 @@ fil_encrypt_page(
 				tmp_buf = tmp_encryption_buf;
 			}
 
-			/* 2nd encryption: 63 bytes from out_buf, result length is 64 bytes */
+			/* 2nd encryption: 64 bytes from out_buf, result length is 64 bytes */
 			err = my_aes_encrypt_cbc((char*)out_buf + len -offset -64,
 					64,
 					(char*)tmp_buf,
@@ -285,6 +290,7 @@ fil_encrypt_page(
 					(const unsigned char *)&iv,
 					iv_len, 1);
 			ut_ad(write_size == 64);
+
 			/* copy 64 bytes from 2nd encryption to out_buf*/
 			memcpy(out_buf + len - offset -64, tmp_buf, 64);
 		}
@@ -348,6 +354,7 @@ fil_encrypt_page(
 	if (tmp_buf!=NULL && tmp_encryption_buf == NULL) {
 		ut_free(tmp_buf);
 	}
+
 	return (out_buf);
 }
 
@@ -373,7 +380,7 @@ fil_decrypt_page(
 	ulint 		len, 		/*!< in: length buffer, which should be decrypted.*/
 	ulint* 		write_size, 	/*!< out: size of the decrypted data. If no error occurred equal to len */
 	ibool* 		page_compressed,/*!<out: is page compressed.*/
-	byte*  		tmp_encryption_buf, /*!< in: temorary buffer or NULL */
+	byte*  		tmp_encryption_buf, /*!< in: temporary buffer or NULL */
 	ulint 		mode)		/*!< in: calling mode. Should be 0. Can be used for unit tests */
 {
 	int err = AES_OK;
@@ -384,7 +391,6 @@ fil_decrypt_page(
 	ulint offset = 0;
 	byte *in_buf = NULL;
 	byte *tmp_buf = NULL;
-	byte *tmp_page_buf = NULL;
 	fil_space_t* space = NULL;
 
 	ulint page_compression_flag = 0;
@@ -486,47 +492,10 @@ fil_decrypt_page(
 	}
 
 	if (tmp_encryption_buf == NULL) {
-		tmp_page_buf = static_cast<byte *>(ut_malloc(len));
 		tmp_buf= static_cast<byte *>(ut_malloc(64));
 	} else {
-		tmp_page_buf = tmp_encryption_buf;
-		tmp_buf = tmp_encryption_buf + UNIV_PAGE_SIZE;
+		tmp_buf = tmp_encryption_buf;
 	}
-
-	/* 1st decryption: 64 bytes */
-	/* 64 bytes from data area are copied to temporary buffer.
-	 * These are the last 64 of the (encrypted) payload */
-	memcpy(tmp_buf, buf + len - offset - 64, 64);
-
-	err = my_aes_decrypt_cbc((const char*) tmp_buf, 64,
-				(char *) tmp_page_buf + len - offset - 64,
-				&tmp_write_size, (const unsigned char *) &rkey, key_len,
-				(const unsigned char *) &iv, iv_len, 1);
-
-	ut_ad(tmp_write_size == 64);
-
-
-	/* If decrypt fails it means that page is corrupted or has an unknown key */
-	if (err != AES_OK) {
-		fprintf(stderr, "InnoDB: Corruption: Page is marked as encrypted\n"
-				"InnoDB: but decrypt failed with error %d.\n"
-			"InnoDB: size %lu len %lu, key %d\n", err, (ulint)data_size,
-				len, (int)page_decryption_key);
-		fflush(stderr);
-
-		if (tmp_encryption_buf == NULL) {
-			ut_free(tmp_page_buf);
-			ut_free(tmp_buf);
-		}
-
-		return err;
-	}
-
-	ut_ad(tmp_write_size == 64);
-
-	/* copy 1st part of payload from buf to tmp_page_buf */
-	/* do not override result of 1st decryption */
-	memcpy(tmp_page_buf + FIL_PAGE_DATA, buf + FIL_PAGE_DATA, len -offset -64 - FIL_PAGE_DATA);
 
 	// If no buffer was given, we need to allocate temporal buffer
 	if (page_buf == NULL) {
@@ -539,10 +508,47 @@ fil_decrypt_page(
 		in_buf = page_buf;
 	}
 
+	/* 1st decryption: 64 bytes */
+	/* 64 bytes from data area are copied to temporary buffer.
+	 * These are the last 64 of the (encrypted) payload */
+	memcpy(tmp_buf, buf + len - offset - 64, 64);
+
+	err = my_aes_decrypt_cbc((const char*) tmp_buf, 64,
+				(char *) in_buf + len - offset - 64,
+				&tmp_write_size, (const unsigned char *) &rkey, key_len,
+				(const unsigned char *) &iv, iv_len, 1);
+
+	ut_ad(tmp_write_size == 64);
+
+	/* If decrypt fails it means that page is corrupted or has an unknown key */
+	if (err != AES_OK) {
+		fprintf(stderr, "InnoDB: Corruption: Page is marked as encrypted\n"
+				"InnoDB: but decrypt failed with error %d.\n"
+			"InnoDB: size %lu len %lu, key %d\n", err, (ulint)data_size,
+				len, (int)page_decryption_key);
+		fflush(stderr);
+
+		if (tmp_encryption_buf == NULL) {
+			ut_free(tmp_buf);
+		}
+
+		if (page_buf == NULL) {
+			ut_free(in_buf);
+		}
+		return err;
+	}
+
+	ut_ad(tmp_write_size == 64);
+
+	/* copy 1st part of payload from buf to in_buf */
+	/* do not override result of 1st decryption */
+	memcpy(in_buf + FIL_PAGE_DATA, buf + FIL_PAGE_DATA, len -offset -64 - FIL_PAGE_DATA);
+
+
 	/* Decrypt rest of the page */
-	err = my_aes_decrypt_cbc((char*) tmp_page_buf + FIL_PAGE_DATA,
+	err = my_aes_decrypt_cbc((char*) in_buf + FIL_PAGE_DATA,
 			data_size,
-			(char *) in_buf + FIL_PAGE_DATA,
+			(char *) buf + FIL_PAGE_DATA,
 			&tmp_write_size,
 			(const unsigned char *)&rkey,
 			key_len,
@@ -551,15 +557,14 @@ fil_decrypt_page(
 			1);
 	ut_ad(tmp_write_size = data_size);
 
-	/* copy remaining bytes from tmp_page_buf to in_buf.
+	/* copy remaining bytes from in_buf to buf.
 	 */
 	ulint bytes_to_copy = len - FIL_PAGE_DATA - data_size - offset;
-	memcpy(in_buf + FIL_PAGE_DATA + data_size, tmp_page_buf + FIL_PAGE_DATA + data_size, bytes_to_copy);
+	memcpy(buf + FIL_PAGE_DATA + data_size, in_buf + FIL_PAGE_DATA + data_size, bytes_to_copy);
 
 	/* apart from header data everything is now in in_buf */
 
 	if (tmp_encryption_buf == NULL) {
-		ut_free(tmp_page_buf);
 		ut_free(tmp_buf);
 	}
 
@@ -567,12 +572,6 @@ fil_decrypt_page(
 	fprintf(stderr, "InnoDB: Note: Decryption succeeded for len %lu\n", len);
 	fflush(stderr);
 #endif
-
-	/* copy header */
-	memcpy(in_buf, buf, FIL_PAGE_DATA);
-
-	/* Copy the decrypted page to the buffer pool*/
-	memcpy(buf, in_buf, len);
 
 	if (page_buf == NULL) {
 		ut_free(in_buf);
@@ -622,9 +621,7 @@ fil_decrypt_page(
 			fflush(stderr);
 			return err;
 		}
-	}
 
-	if (!(page_compression_flag)) {
 		/* calc check sums and write to the buffer, if page is not of type PAGE_COMPRESSED.
 		 * if the decryption is verified, it is assumed that the original page was restored, re-calculating the original
 		 * checksums should be ok
@@ -635,8 +632,8 @@ fil_decrypt_page(
 		mach_write_to_4(buf + FIL_PAGE_SPACE_OR_CHKSUM, BUF_NO_CHECKSUM_MAGIC);
 	}
 
-
 	srv_stats.pages_page_decrypted.inc();
+
 	return err;
 }
 
