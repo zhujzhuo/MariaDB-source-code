@@ -251,7 +251,7 @@ struct os_aio_slot_t{
 					 free this */
 	byte*           tmp_encryption_buf; /*!< a temporal buffer used by page encryption */
 
-	ibool           page_compress_success;
+	ibool           page_compression_success;
 	ibool           page_encryption_success;
 	/*!< TRUE if page compression was
 	successfull, false if not */
@@ -4799,7 +4799,7 @@ found:
 	slot->io_already_done = FALSE;
 	slot->space_id = space_id;
 
-	slot->page_compress_success = FALSE;
+	slot->page_compression_success = FALSE;
 	slot->page_encryption_success = FALSE;
 
 	slot->write_size = write_size;
@@ -4847,9 +4847,9 @@ found:
 			len = real_len;
 			buf = slot->page_buf;
 			slot->len = real_len;
-			slot->page_compress_success = TRUE;
+			slot->page_compression_success = TRUE;
 		} else {
-			slot->page_compress_success = FALSE;
+			slot->page_compression_success = FALSE;
 		}
 
 		/* Take array mutex back */
@@ -5562,7 +5562,7 @@ os_aio_windows_handle(
 	        if (slot->type == OS_FILE_READ) {
 			fil_decompress_page(slot->page_buf, slot->buf, slot->len, slot->write_size);
 		} else {
-			if (slot->page_compress_success && fil_page_is_compressed(slot->page_buf)) {
+			if (slot->page_compression_success && fil_page_is_compressed(slot->page_buf)) {
 				if (srv_use_trim && os_fallocate_failed == FALSE) {
 					// Deallocate unused blocks from file system
 					os_file_trim(slot);
@@ -5694,7 +5694,7 @@ retry:
 				if (slot->type == OS_FILE_READ) {
 					fil_decompress_page(slot->page_buf, slot->buf, slot->len, slot->write_size);
 				} else {
-					if (slot->page_compress_success &&
+					if (slot->page_compression_success &&
 					    fil_page_is_compressed(slot->page_buf)) {
 						ut_ad(slot->page_compression_page);
 						if (srv_use_trim && os_fallocate_failed == FALSE) {
