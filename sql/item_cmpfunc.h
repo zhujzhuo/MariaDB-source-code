@@ -122,6 +122,8 @@ public:
   Item_bool_func() :Item_int_func() {}
   Item_bool_func(Item *a) :Item_int_func(a) {}
   Item_bool_func(Item *a,Item *b) :Item_int_func(a,b) {}
+  Item_bool_func(Item *a, Item *b, Item *c) :Item_int_func(a, b, c) {}
+  Item_bool_func(List<Item> &list) :Item_int_func(list) { }
   Item_bool_func(THD *thd, Item_bool_func *item) :Item_int_func(thd, item) {}
   bool is_bool_func() { return 1; }
   void fix_length_and_dec() { decimals=0; max_length=1; }
@@ -364,7 +366,7 @@ public:
   virtual bool l_op() const { return 1; }
 };
 
-class Item_bool_func2 :public Item_int_func
+class Item_bool_func2 :public Item_bool_func
 {						/* Bool with 2 string args */
 protected:
   Arg_comparator cmp;
@@ -372,7 +374,7 @@ protected:
 
 public:
   Item_bool_func2(Item *a,Item *b)
-    :Item_int_func(a,b), cmp(tmp_arg, tmp_arg+1),
+    :Item_bool_func(a,b), cmp(tmp_arg, tmp_arg+1),
      abort_on_null(FALSE) { sargable= TRUE; }
   void fix_length_and_dec();
   int set_cmp_func()
@@ -389,14 +391,12 @@ public:
   }
 
   bool is_null() { return MY_TEST(args[0]->is_null() || args[1]->is_null()); }
-  bool is_bool_func() { return 1; }
   CHARSET_INFO *compare_collation() { return cmp.cmp_collation.collation; }
-  uint decimal_precision() const { return 1; }
   void top_level_item() { abort_on_null= TRUE; }
   Arg_comparator *get_comparator() { return &cmp; }
   void cleanup()
   {
-    Item_int_func::cleanup();
+    Item_bool_func::cleanup();
     cmp.cleanup();
   }
 
@@ -646,16 +646,16 @@ public:
 
 */
 
-class Item_func_opt_neg :public Item_int_func
+class Item_func_opt_neg :public Item_bool_func
 {
 public:
   bool negated;     /* <=> the item represents NOT <func> */
   bool pred_level;  /* <=> [NOT] <func> is used on a predicate level */
 public:
   Item_func_opt_neg(Item *a, Item *b, Item *c)
-    :Item_int_func(a, b, c), negated(0), pred_level(0) {}
+    :Item_bool_func(a, b, c), negated(0), pred_level(0) {}
   Item_func_opt_neg(List<Item> &list)
-    :Item_int_func(list), negated(0), pred_level(0) {}
+    :Item_bool_func(list), negated(0), pred_level(0) {}
 public:
   inline void negate() { negated= !negated; }
   inline void top_level_item() { pred_level= 1; }
@@ -686,9 +686,7 @@ public:
   bool fix_fields(THD *, Item **);
   void fix_length_and_dec();
   virtual void print(String *str, enum_query_type query_type);
-  bool is_bool_func() { return 1; }
   CHARSET_INFO *compare_collation() { return cmp_collation.collation; }
-  uint decimal_precision() const { return 1; }
   bool eval_not_null_tables(uchar *opt_arg);
   void fix_after_pullout(st_select_lex *new_parent, Item **ref);
   bool count_sargable_conds(uchar *arg);
@@ -756,29 +754,52 @@ public:
 };
 
 
-class Item_func_ifnull :public Item_func_coalesce
+/*
+  Case abbreviations that aggregate its result field type by two arguments:
+    IFNULL(arg1, arg2)
+    IF(switch, arg1, arg2)
+*/
+class Item_func_case_abbreviation2 :public Item_func_hybrid_field_type
 {
-protected:
-  bool field_type_defined;
 public:
-  Item_func_ifnull(Item *a, Item *b) :Item_func_coalesce(a,b) {}
+  Item_func_case_abbreviation2(Item *a, Item *b)
+   :Item_func_hybrid_field_type(a, b) { }
+  Item_func_case_abbreviation2(Item *a, Item *b, Item *c)
+   :Item_func_hybrid_field_type(a, b, c) { }
+  void fix_length_and_dec(Item **args);
+  uint decimal_precision(Item **args) const;
+};
+
+
+class Item_func_ifnull :public Item_func_case_abbreviation2
+{
+public:
+  Item_func_ifnull(Item *a, Item *b) :Item_func_case_abbreviation2(a,b) {}
   double real_op();
   longlong int_op();
   String *str_op(String *str);
   my_decimal *decimal_op(my_decimal *);
   bool date_op(MYSQL_TIME *ltime,uint fuzzydate);
-  void fix_length_and_dec();
+  void fix_length_and_dec()
+  {
+    Item_func_case_abbreviation2::fix_length_and_dec(args);
+    maybe_null= args[1]->maybe_null;
+  }
   const char *func_name() const { return "ifnull"; }
   Field *tmp_table_field(TABLE *table);
-  uint decimal_precision() const;
+  table_map not_null_tables() const { return 0; }
+  uint decimal_precision() const
+  {
+    return Item_func_case_abbreviation2::decimal_precision(args);
+  }
 };
 
 
-class Item_func_if :public Item_func_hybrid_field_type
+class Item_func_if :public Item_func_case_abbreviation2
 {
 public:
   Item_func_if(Item *a,Item *b,Item *c)
-    :Item_func_hybrid_field_type(a,b,c)
+    :Item_func_case_abbreviation2(a, b, c)
   {}
   bool date_op(MYSQL_TIME *ltime, uint fuzzydate);
   longlong int_op();
@@ -787,7 +808,10 @@ public:
   String *str_op(String *);
   bool fix_fields(THD *, Item **);
   void fix_length_and_dec();
-  uint decimal_precision() const;
+  uint decimal_precision() const
+  {
+    return Item_func_case_abbreviation2::decimal_precision(args + 1);
+  }
   const char *func_name() const { return "if"; }
   bool eval_not_null_tables(uchar *opt_arg);
   void fix_after_pullout(st_select_lex *new_parent, Item **ref);
@@ -796,20 +820,30 @@ private:
 };
 
 
-class Item_func_nullif :public Item_bool_func2
+class Item_func_nullif :public Item_func_hybrid_field_type
 {
-  enum Item_result cached_result_type;
+  Arg_comparator cmp;
+  /*
+    Remember the first argument in case it will be substituted by either of:
+    - convert_const_compared_to_int_field()
+    - agg_item_set_converter() in set_cmp_func()
+    - cache_converted_constant() in set_cmp_func()
+    The original item will be stored in m_arg0_copy, to return result.
+    The substituted item will be stored in args[0], for comparison purposes.
+  */
+  Item *m_args0_copy;
 public:
   Item_func_nullif(Item *a,Item *b)
-    :Item_bool_func2(a,b), cached_result_type(INT_RESULT)
+    :Item_func_hybrid_field_type(a, b),
+     m_args0_copy(a)
   {}
-  double val_real();
-  longlong val_int();
-  String *val_str(String *str);
-  my_decimal *val_decimal(my_decimal *);
-  enum Item_result result_type () const { return cached_result_type; }
+  bool date_op(MYSQL_TIME *ltime, uint fuzzydate);
+  double real_op();
+  longlong int_op();
+  String *str_op(String *str);
+  my_decimal *decimal_op(my_decimal *);
   void fix_length_and_dec();
-  uint decimal_precision() const { return args[0]->decimal_precision(); }
+  uint decimal_precision() const { return m_args0_copy->decimal_precision(); }
   const char *func_name() const { return "nullif"; }
 
   virtual inline void print(String *str, enum_query_type query_type)
@@ -1318,7 +1352,6 @@ public:
   longlong val_int();
   bool fix_fields(THD *, Item **);
   void fix_length_and_dec();
-  uint decimal_precision() const { return 1; }
   void cleanup()
   {
     uint i;
@@ -1339,7 +1372,6 @@ public:
   enum Functype functype() const { return IN_FUNC; }
   const char *func_name() const { return " IN "; }
   bool nulls_in_row();
-  bool is_bool_func() { return 1; }
   CHARSET_INFO *compare_collation() { return cmp_collation.collation; }
   bool eval_not_null_tables(uchar *opt_arg);
   void fix_after_pullout(st_select_lex *new_parent, Item **ref);

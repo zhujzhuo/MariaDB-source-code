@@ -525,6 +525,32 @@ static bool convert_const_to_int(THD *thd, Item_field *field_item,
 }
 
 
+/*
+  Make a special case of compare with fields to get nicer comparisons
+  of bigint numbers with constant string.
+  This directly contradicts the manual (number and a string should
+  be compared as doubles), but seems to provide more
+  "intuitive" behavior in some cases (but less intuitive in others).
+*/
+void Item_func::convert_const_compared_to_int_field(THD *thd)
+{
+  DBUG_ASSERT(arg_count == 2);
+  if (!thd->lex->is_ps_or_view_context_analysis())
+  {
+    int field;
+    if (args[field= 0]->real_item()->type() == FIELD_ITEM ||
+        args[field= 1]->real_item()->type() == FIELD_ITEM)
+    {
+      Item_field *field_item= (Item_field*) (args[field]->real_item());
+      if ((field_item->field_type() ==  MYSQL_TYPE_LONGLONG ||
+           field_item->field_type() ==  MYSQL_TYPE_YEAR) &&
+          convert_const_to_int(thd, field_item, &args[!field]))
+        args[0]->cmp_context= args[1]->cmp_context= INT_RESULT;
+    }
+  }
+}
+
+
 void Item_bool_func2::fix_length_and_dec()
 {
   max_length= 1;				     // Function returns 0 or 1
@@ -557,29 +583,9 @@ void Item_bool_func2::fix_length_and_dec()
   args[0]->cmp_context= args[1]->cmp_context=
     item_cmp_type(args[0]->result_type(), args[1]->result_type());
 
-  /*
-    Make a special case of compare with fields to get nicer comparisons
-    of bigint numbers with constant string.
-    This directly contradicts the manual (number and a string should
-    be compared as doubles), but seems to provide more
-    "intuitive" behavior in some cases (but less intuitive in others).
-
-    But disable conversion in case of LIKE function.
-  */
-  THD *thd= current_thd;
-  if (functype() != LIKE_FUNC && !thd->lex->is_ps_or_view_context_analysis())
-  {
-    int field;
-    if (args[field= 0]->real_item()->type() == FIELD_ITEM ||
-        args[field= 1]->real_item()->type() == FIELD_ITEM)
-    {
-      Item_field *field_item= (Item_field*) (args[field]->real_item());
-      if ((field_item->field_type() ==  MYSQL_TYPE_LONGLONG ||
-           field_item->field_type() ==  MYSQL_TYPE_YEAR) &&
-          convert_const_to_int(thd, field_item, &args[!field]))
-        args[0]->cmp_context= args[1]->cmp_context= INT_RESULT;
-    }
-  }
+  //  Convert constants when compared to int/year field, unless this is LIKE
+  if (functype() != LIKE_FUNC)
+    convert_const_compared_to_int_field(current_thd);
   set_cmp_func();
 }
 
@@ -2432,13 +2438,14 @@ void Item_func_between::print(String *str, enum_query_type query_type)
   str->append(')');
 }
 
+
 void
-Item_func_ifnull::fix_length_and_dec()
+Item_func_case_abbreviation2::fix_length_and_dec(Item **args)
 {
   uint32 char_length;
   agg_result_type(&cached_result_type, args, 2);
   cached_field_type= agg_field_type(args, 2);
-  maybe_null=args[1]->maybe_null;
+  maybe_null=args[0]->maybe_null || args[1]->maybe_null;
   decimals= MY_MAX(args[0]->decimals, args[1]->decimals);
   unsigned_flag= args[0]->unsigned_flag && args[1]->unsigned_flag;
 
@@ -2457,7 +2464,7 @@ Item_func_ifnull::fix_length_and_dec()
 
   switch (cached_result_type) {
   case STRING_RESULT:
-    if (count_string_result_length(cached_field_type, args, arg_count))
+    if (count_string_result_length(cached_field_type, args, 2))
       return;
     break;
   case DECIMAL_RESULT:
@@ -2475,7 +2482,8 @@ Item_func_ifnull::fix_length_and_dec()
 }
 
 
-uint Item_func_ifnull::decimal_precision() const
+
+uint Item_func_case_abbreviation2::decimal_precision(Item **args) const
 {
   int arg0_int_part= args[0]->decimal_int_part();
   int arg1_int_part= args[1]->decimal_int_part();
@@ -2662,47 +2670,7 @@ Item_func_if::fix_length_and_dec()
     maybe_null= true;
     return;
   }
-
-  agg_result_type(&cached_result_type, args + 1, 2);
-  cached_field_type= agg_field_type(args + 1, 2);
-  maybe_null= args[1]->maybe_null || args[2]->maybe_null;
-  decimals= MY_MAX(args[1]->decimals, args[2]->decimals);
-  unsigned_flag=args[1]->unsigned_flag && args[2]->unsigned_flag;
-
-  if (cached_result_type == STRING_RESULT)
-  {
-    count_string_result_length(cached_field_type, args + 1, 2);
-    return;
-  }
-  else
-  {
-    collation.set_numeric(); // Number
-  }
-
-  uint32 char_length;
-  if ((cached_result_type == DECIMAL_RESULT )
-      || (cached_result_type == INT_RESULT))
-  {
-    int len1= args[1]->max_length - args[1]->decimals
-      - (args[1]->unsigned_flag ? 0 : 1);
-
-    int len2= args[2]->max_length - args[2]->decimals
-      - (args[2]->unsigned_flag ? 0 : 1);
-
-    char_length= MY_MAX(len1, len2) + decimals + (unsigned_flag ? 0 : 1);
-  }
-  else
-    char_length= MY_MAX(args[1]->max_char_length(), args[2]->max_char_length());
-  fix_char_length(char_length);
-}
-
-
-uint Item_func_if::decimal_precision() const
-{
-  int arg1_prec= args[1]->decimal_int_part();
-  int arg2_prec= args[2]->decimal_int_part();
-  int precision=MY_MAX(arg1_prec,arg2_prec) + decimals;
-  return MY_MIN(precision, DECIMAL_MAX_PRECISION);
+  Item_func_case_abbreviation2::fix_length_and_dec(args + 1);
 }
 
 
@@ -2761,18 +2729,21 @@ bool Item_func_if::date_op(MYSQL_TIME *ltime, uint fuzzydate)
 void
 Item_func_nullif::fix_length_and_dec()
 {
-  Item_bool_func2::fix_length_and_dec();
+  if (!args[0])					// Only false if EOM
+    return;
+
+  cached_result_type= args[0]->result_type();
+  cached_field_type= args[0]->field_type();
+  collation.set(args[0]->collation);
+  decimals= args[0]->decimals;
+  unsigned_flag= args[0]->unsigned_flag;
+  fix_char_length(args[0]->max_char_length());
+
+  convert_const_compared_to_int_field(current_thd);
+  args[0]->cmp_context= args[1]->cmp_context=
+    item_cmp_type(args[0]->result_type(), args[1]->result_type());
+  cmp.set_cmp_func(this, tmp_arg, tmp_arg + 1, args[0]->cmp_context);
   maybe_null=1;
-  if (args[0])					// Only false if EOM
-  {
-    decimals=args[0]->decimals;
-    unsigned_flag= args[0]->unsigned_flag;
-    cached_result_type= args[0]->result_type();
-    if (cached_result_type == STRING_RESULT &&
-        agg_arg_charsets_for_comparison(collation, args, arg_count))
-      return;
-    fix_char_length(args[0]->max_char_length());
-  }
 }
 
 
@@ -2787,7 +2758,7 @@ Item_func_nullif::fix_length_and_dec()
 */
 
 double
-Item_func_nullif::val_real()
+Item_func_nullif::real_op()
 {
   DBUG_ASSERT(fixed == 1);
   double value;
@@ -2796,13 +2767,13 @@ Item_func_nullif::val_real()
     null_value=1;
     return 0.0;
   }
-  value= args[0]->val_real();
-  null_value=args[0]->null_value;
+  value= m_args0_copy->val_real();
+  null_value=m_args0_copy->null_value;
   return value;
 }
 
 longlong
-Item_func_nullif::val_int()
+Item_func_nullif::int_op()
 {
   DBUG_ASSERT(fixed == 1);
   longlong value;
@@ -2811,13 +2782,13 @@ Item_func_nullif::val_int()
     null_value=1;
     return 0;
   }
-  value=args[0]->val_int();
-  null_value=args[0]->null_value;
+  value=m_args0_copy->val_int();
+  null_value=m_args0_copy->null_value;
   return value;
 }
 
 String *
-Item_func_nullif::val_str(String *str)
+Item_func_nullif::str_op(String *str)
 {
   DBUG_ASSERT(fixed == 1);
   String *res;
@@ -2826,14 +2797,14 @@ Item_func_nullif::val_str(String *str)
     null_value=1;
     return 0;
   }
-  res=args[0]->val_str(str);
-  null_value=args[0]->null_value;
+  res=m_args0_copy->val_str(str);
+  null_value=m_args0_copy->null_value;
   return res;
 }
 
 
 my_decimal *
-Item_func_nullif::val_decimal(my_decimal * decimal_value)
+Item_func_nullif::decimal_op(my_decimal * decimal_value)
 {
   DBUG_ASSERT(fixed == 1);
   my_decimal *res;
@@ -2842,16 +2813,26 @@ Item_func_nullif::val_decimal(my_decimal * decimal_value)
     null_value=1;
     return 0;
   }
-  res= args[0]->val_decimal(decimal_value);
-  null_value= args[0]->null_value;
+  res= m_args0_copy->val_decimal(decimal_value);
+  null_value= m_args0_copy->null_value;
   return res;
+}
+
+
+bool
+Item_func_nullif::date_op(MYSQL_TIME *ltime, uint fuzzydate)
+{
+  DBUG_ASSERT(fixed == 1);
+  if (!cmp.compare())
+    return (null_value= true);
+  return (null_value= m_args0_copy->get_date(ltime, fuzzydate));
 }
 
 
 bool
 Item_func_nullif::is_null()
 {
-  return (null_value= (!cmp.compare() ? 1 : args[0]->null_value)); 
+  return (null_value= (!cmp.compare() ? 1 : m_args0_copy->null_value)); 
 }
 
 

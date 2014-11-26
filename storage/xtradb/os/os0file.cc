@@ -6192,12 +6192,10 @@ consecutive_loop:
 			aio_slot->page_compression);
 	}
 
-	DBUG_EXECUTE_IF("ib_os_aio_func_io_failure_28_2",
-		os_has_said_disk_full = FALSE;);
-	DBUG_EXECUTE_IF("ib_os_aio_func_io_failure_28_2",
-			ret = 0;);
-	DBUG_EXECUTE_IF("ib_os_aio_func_io_failure_28_2",
-			errno = 28;);
+	if (aio_slot->type == OS_FILE_WRITE) {
+		DBUG_EXECUTE_IF("ib_os_aio_func_io_failure_28_2",
+			os_has_said_disk_full = FALSE; ret = 0; errno = 28;);
+	}
 
 	srv_set_io_thread_op_info(global_segment, "file i/o done");
 
@@ -6668,6 +6666,7 @@ os_file_trim(
 	if (ret) {
 		/* After first failure do not try to trim again */
 		os_fallocate_failed = TRUE;
+		srv_use_trim = FALSE;
 		ut_print_timestamp(stderr);
 		fprintf(stderr,
 			"  InnoDB: [Warning] fallocate call failed with error code %d.\n"
@@ -6694,6 +6693,7 @@ os_file_trim(
 		"  InnoDB: [Warning] fallocate not supported on this installation."
 		"  InnoDB: Disabling fallocate for now.");
 	os_fallocate_failed = TRUE;
+	srv_use_trim = FALSE;
 	if (slot->write_size) {
 		*slot->write_size = 0;
 	}
@@ -6713,6 +6713,7 @@ os_file_trim(
 	if (!ret) {
 		/* After first failure do not try to trim again */
 		os_fallocate_failed = TRUE;
+		srv_use_trim = FALSE;
 		ut_print_timestamp(stderr);
 		fprintf(stderr,
 			"  InnoDB: [Warning] fallocate call failed with error.\n"
@@ -6874,12 +6875,14 @@ os_file_get_block_size(
 		DWORD NumberOfFreeClusters = 0;
 		DWORD TotalNumberOfClusters = 0;
 
+		/*
 		if (GetFreeSpace((LPCTSTR)name, &SectorsPerCluster, &BytesPerSector, &NumberOfFreeClusters, &TotalNumberOfClusters)) {
 			fblock_size = BytesPerSector;
 		} else {
 			fprintf(stderr, "InnoDB: Warning: GetFreeSpace() failed on file %s\n", name);
 			os_file_handle_error_no_exit(name, "GetFreeSpace()", FALSE, __FILE__, __LINE__);
 		}
+		*/
 	}
 #endif /* __WIN__*/
 
