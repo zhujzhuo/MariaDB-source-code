@@ -63,6 +63,15 @@ count(*)
 select count(*) from innodb_redundant where c1 < 1500000;
 count(*)
 5000
+SELECT variable_value >= 0 FROM information_schema.global_status WHERE LOWER(variable_name) = 'innodb_num_pages_page_encrypted';
+variable_value >= 0
+1
+SELECT variable_value >= 0 FROM information_schema.global_status WHERE LOWER(variable_name) = 'innodb_num_pages_page_decrypted';
+variable_value >= 0
+1
+SELECT variable_value = 0 FROM information_schema.global_status WHERE LOWER(variable_name) = 'innodb_num_pages_page_encryption_error';
+variable_value = 0
+1
 SET GLOBAL innodb_file_format = `Barracuda`;
 SET GLOBAL innodb_file_per_table = ON;
 update innodb_compact set c1 = c1 + 1;
@@ -81,6 +90,15 @@ count(*)
 select count(*) from innodb_redundant where c1 < 1500000;
 count(*)
 5000
+SELECT variable_value >= 0 FROM information_schema.global_status WHERE LOWER(variable_name) = 'innodb_num_pages_page_encrypted';
+variable_value >= 0
+1
+SELECT variable_value >= 0 FROM information_schema.global_status WHERE LOWER(variable_name) = 'innodb_num_pages_page_decrypted';
+variable_value >= 0
+1
+SELECT variable_value = 0 FROM information_schema.global_status WHERE LOWER(variable_name) = 'innodb_num_pages_page_encryption_error';
+variable_value = 0
+1
 alter table innodb_compact engine=innodb page_encryption=DEFAULT page_encryption_key=DEFAULT;
 show create table innodb_compact;
 Table	Create Table
@@ -151,6 +169,15 @@ count(*)
 select count(*) from innodb_redundant where c1 < 1500000;
 count(*)
 5000
+SELECT variable_value = 0 FROM information_schema.global_status WHERE LOWER(variable_name) = 'innodb_num_pages_page_encrypted';
+variable_value = 0
+1
+SELECT variable_value = 0 FROM information_schema.global_status WHERE LOWER(variable_name) = 'innodb_num_pages_page_decrypted';
+variable_value = 0
+1
+SELECT variable_value = 0 FROM information_schema.global_status WHERE LOWER(variable_name) = 'innodb_num_pages_page_encryption_error';
+variable_value = 0
+1
 drop procedure innodb_insert_proc;
 drop table innodb_normal;
 drop table innodb_compact;

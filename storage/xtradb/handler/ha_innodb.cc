@@ -3453,11 +3453,10 @@ innobase_init(
 
 	ut_a(DATA_MYSQL_TRUE_VARCHAR == (ulint)MYSQL_TYPE_VARCHAR);
 
-
 	KeySingleton::getInstance(
 			innobase_data_encryption_providername, innobase_data_encryption_providerurl,
 			innobase_data_encryption_providertype, innobase_data_encryption_filekey);
-	
+
 #ifndef DBUG_OFF
 	static const char	test_filename[] = "-@";
 	char			test_tablename[sizeof test_filename
@@ -11581,7 +11580,7 @@ innobase_table_flags(
 	modified by another thread while the table is being created. */
 	const ulint     default_compression_level = page_zip_level;
 
-    const ulint default_encryption_key = 1;
+	const ulint default_encryption_key = 1;
 
 	*flags = 0;
 	*flags2 = 0;
@@ -11781,11 +11780,12 @@ index_bad:
 		    options->page_compressed,
 		    (ulint)options->page_compression_level == ULINT_UNDEFINED ?
 		        default_compression_level : options->page_compression_level,
-            options->atomic_writes,
-            options->page_encryption,
-            (ulint)options->page_encryption_key == ULINT_UNDEFINED ?
-                    default_encryption_key : options->page_encryption_key);
-    if (create_info->options & HA_LEX_CREATE_TMP_TABLE) {
+		    options->atomic_writes,
+		    options->page_encryption,
+		    (ulint)options->page_encryption_key == ULINT_UNDEFINED ?
+                        default_encryption_key : options->page_encryption_key);
+
+	if (create_info->options & HA_LEX_CREATE_TMP_TABLE) {
 		*flags2 |= DICT_TF2_TEMPORARY;
 	}
 
@@ -11819,24 +11819,26 @@ ha_innobase::check_table_options(
 	enum row_type	row_format = table->s->row_type;;
 	ha_table_option_struct *options= table->s->option_struct;
 	atomic_writes_t awrites = (atomic_writes_t)options->atomic_writes;
-    if (options->page_encryption) {
-        if (!use_tablespace) {
-            push_warning(
-                thd, Sql_condition::WARN_LEVEL_WARN,
-                HA_WRONG_CREATE_OPTION,
-                "InnoDB: PAGE_ENCRYPTION requires"
-                " innodb_file_per_table.");
-            return "PAGE_ENCRYPTION";
-        }
-        if (!KeySingleton::getInstance().isAvailable()) {
-            push_warning(
-                       thd, Sql_condition::WARN_LEVEL_WARN,
-                       HA_WRONG_CREATE_OPTION,
-                       "InnoDB: PAGE_ENCRYPTION needs a key provider"
-                       );
-                   return "PAGE_ENCRYPTION";
-        }
-    }
+
+	if (options->page_encryption) {
+		if (!use_tablespace) {
+			push_warning(
+				thd, Sql_condition::WARN_LEVEL_WARN,
+				HA_WRONG_CREATE_OPTION,
+				"InnoDB: PAGE_ENCRYPTION requires"
+				" innodb_file_per_table.");
+			return "PAGE_ENCRYPTION";
+		}
+
+		if (!KeySingleton::getInstance().isAvailable()) {
+			push_warning(
+				thd, Sql_condition::WARN_LEVEL_WARN,
+				HA_WRONG_CREATE_OPTION,
+				"InnoDB: PAGE_ENCRYPTION needs a key provider"
+			);
+			return "PAGE_ENCRYPTION";
+		}
+	}
 
 	/* Check page compression requirements */
 	if (options->page_compressed) {
@@ -11910,33 +11912,32 @@ ha_innobase::check_table_options(
 		}
 	}
 
-    if ((ulint)options->page_encryption_key != ULINT_UNDEFINED) {
-        if (options->page_encryption == false) {
+	if ((ulint)options->page_encryption_key != ULINT_UNDEFINED) {
+		if (options->page_encryption == false) {
 			/* ignore this to allow alter table without changing page_encryption_key ...*/
-        }
+		}
 
-        if (options->page_encryption_key < 1 || options->page_encryption_key > 255) {
-            push_warning_printf(
-                thd, Sql_condition::WARN_LEVEL_WARN,
-                HA_WRONG_CREATE_OPTION,
-                "InnoDB: invalid PAGE_ENCRYPTION_KEY = %lu."
-                " Valid values are [1..255]",
-                options->page_encryption_key);
-            return "PAGE_ENCRYPTION_KEY";
-        }
+		if (options->page_encryption_key < 1 || options->page_encryption_key > 255) {
+			push_warning_printf(
+				thd, Sql_condition::WARN_LEVEL_WARN,
+				HA_WRONG_CREATE_OPTION,
+				"InnoDB: invalid PAGE_ENCRYPTION_KEY = %lu."
+				" Valid values are [1..255]",
+				options->page_encryption_key);
+			return "PAGE_ENCRYPTION_KEY";
+		}
 
-        if (!KeySingleton::getInstance().isAvailable() || KeySingleton::getInstance().getKeys(options->page_encryption_key)==NULL) {
-        	  push_warning_printf(
-						   thd, Sql_condition::WARN_LEVEL_WARN,
-						   HA_WRONG_CREATE_OPTION,
-						   "InnoDB: PAGE_ENCRYPTION_KEY encryption key %lu not available",
-						   options->page_encryption_key
-						   );
-					   return "PAGE_ENCRYPTION_KEY";
+		if (!KeySingleton::getInstance().isAvailable() || KeySingleton::getInstance().getKeys(options->page_encryption_key)==NULL) {
+			push_warning_printf(
+				thd, Sql_condition::WARN_LEVEL_WARN,
+				HA_WRONG_CREATE_OPTION,
+				"InnoDB: PAGE_ENCRYPTION_KEY encryption key %lu not available",
+				options->page_encryption_key
+			);
+			return "PAGE_ENCRYPTION_KEY";
 
-        }
-    }
-
+		}
+	}
 
 	/* Check atomic writes requirements */
 	if (awrites == ATOMIC_WRITES_ON ||
@@ -20242,10 +20243,10 @@ static MYSQL_SYSVAR_STR(data_encryption_providerurl, innobase_data_encryption_pr
   "Path or URL for keyfile or keyserver.",
   NULL, NULL, NULL);
 
-  static MYSQL_SYSVAR_STR(data_encryption_filekey, innobase_data_encryption_filekey,
-    PLUGIN_VAR_RQCMDARG | PLUGIN_VAR_READONLY,
-    "Key to encrypt / decrypt the keyfile.",
-    NULL, NULL, NULL);
+static MYSQL_SYSVAR_STR(data_encryption_filekey, innobase_data_encryption_filekey,
+  PLUGIN_VAR_RQCMDARG | PLUGIN_VAR_READONLY,
+  "Key to encrypt / decrypt the keyfile.",
+  NULL, NULL, NULL);
 
 static struct st_mysql_sys_var* innobase_system_variables[]= {
   MYSQL_SYSVAR(log_block_size),

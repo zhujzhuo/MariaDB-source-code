@@ -51,6 +51,11 @@ select count(*) from innodb_compressed where c1 < 1500000;
 select count(*) from innodb_dynamic where c1 < 1500000;
 select count(*) from innodb_redundant where c1 < 1500000;
 
+# Note there that these variables are updated only when real I/O is done, thus they are not reliable
+SELECT variable_value >= 0 FROM information_schema.global_status WHERE LOWER(variable_name) = 'innodb_num_pages_page_encrypted';
+SELECT variable_value >= 0 FROM information_schema.global_status WHERE LOWER(variable_name) = 'innodb_num_pages_page_decrypted';
+SELECT variable_value = 0 FROM information_schema.global_status WHERE LOWER(variable_name) = 'innodb_num_pages_page_encryption_error';
+
 --source include/restart_mysqld.inc
 
 SET GLOBAL innodb_file_format = `Barracuda`;
@@ -64,6 +69,10 @@ select count(*) from innodb_compact where c1 < 1500000;
 select count(*) from innodb_compressed where c1 < 1500000;
 select count(*) from innodb_dynamic where c1 < 1500000;
 select count(*) from innodb_redundant where c1 < 1500000;
+
+SELECT variable_value >= 0 FROM information_schema.global_status WHERE LOWER(variable_name) = 'innodb_num_pages_page_encrypted';
+SELECT variable_value >= 0 FROM information_schema.global_status WHERE LOWER(variable_name) = 'innodb_num_pages_page_decrypted';
+SELECT variable_value = 0 FROM information_schema.global_status WHERE LOWER(variable_name) = 'innodb_num_pages_page_encryption_error';
 
 alter table innodb_compact engine=innodb page_encryption=DEFAULT page_encryption_key=DEFAULT;
 show create table innodb_compact;
@@ -92,6 +101,11 @@ select count(*) from innodb_compact where c1 < 1500000;
 select count(*) from innodb_compressed where c1 < 1500000;
 select count(*) from innodb_dynamic where c1 < 1500000;
 select count(*) from innodb_redundant where c1 < 1500000;
+
+# After alter+restart these should be 0
+SELECT variable_value = 0 FROM information_schema.global_status WHERE LOWER(variable_name) = 'innodb_num_pages_page_encrypted';
+SELECT variable_value = 0 FROM information_schema.global_status WHERE LOWER(variable_name) = 'innodb_num_pages_page_decrypted';
+SELECT variable_value = 0 FROM information_schema.global_status WHERE LOWER(variable_name) = 'innodb_num_pages_page_encryption_error';
 
 drop procedure innodb_insert_proc;
 drop table innodb_normal;
