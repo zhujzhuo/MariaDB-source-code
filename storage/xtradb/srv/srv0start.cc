@@ -667,7 +667,8 @@ create_log_files(
 	fil_space_create(
 		logfilename, SRV_LOG_SPACE_FIRST_ID,
 		fsp_flags_set_page_size(0, UNIV_PAGE_SIZE),
-		FIL_LOG);
+		FIL_LOG,
+		NULL /* no encryption yet */);
 	ut_a(fil_validate());
 
 	logfile0 = fil_node_create(
@@ -689,7 +690,7 @@ create_log_files(
 #ifdef UNIV_LOG_ARCHIVE
 	/* Create the file space object for archived logs. */
 	fil_space_create("arch_log_space", SRV_LOG_SPACE_FIRST_ID + 1,
-			 0, FIL_LOG);
+		0, FIL_LOG, NULL /* no encryption yet */);
 #endif
 	log_group_init(0, srv_n_log_files,
 		       srv_log_file_size * UNIV_PAGE_SIZE,
@@ -815,6 +816,7 @@ open_or_create_data_files(
 	ulint		space;
 	ulint		rounded_size_pages;
 	char		name[10000];
+	fil_space_crypt_t*    crypt_data;
 
 	if (srv_n_data_files >= 1000) {
 
@@ -1030,7 +1032,7 @@ skip_size_check:
 check_first_page:
 			check_msg = fil_read_first_page(
 				files[i], one_opened, &flags, &space,
-				min_flushed_lsn, max_flushed_lsn, ULINT_UNDEFINED);
+				min_flushed_lsn, max_flushed_lsn, ULINT_UNDEFINED, &crypt_data);
 
 			if (check_msg) {
 
@@ -1124,6 +1126,8 @@ check_first_page:
 			}
 
 			*sum_of_new_sizes += srv_data_file_sizes[i];
+
+			crypt_data = fil_space_create_crypt_data();
 		}
 
 		ret = os_file_close(files[i]);
@@ -1131,7 +1135,9 @@ check_first_page:
 
 		if (i == 0) {
 			flags = fsp_flags_set_page_size(0, UNIV_PAGE_SIZE);
-			fil_space_create(name, 0, flags, FIL_TABLESPACE);
+			fil_space_create(name, 0, flags, FIL_TABLESPACE,
+					 crypt_data);
+			crypt_data = NULL;
 		}
 
 		ut_a(fil_validate());
@@ -1277,7 +1283,8 @@ srv_undo_tablespace_open(
 
 		/* Set the compressed page size to 0 (non-compressed) */
 		flags = fsp_flags_set_page_size(0, UNIV_PAGE_SIZE);
-		fil_space_create(name, space, flags, FIL_TABLESPACE);
+		fil_space_create(name, space, flags, FIL_TABLESPACE,
+				 NULL /* no encryption */);
 
 		ut_a(fil_validate());
 
@@ -2308,7 +2315,8 @@ innobase_start_or_create_for_mysql(void)
 		fil_space_create(logfilename,
 				 SRV_LOG_SPACE_FIRST_ID,
 				 fsp_flags_set_page_size(0, UNIV_PAGE_SIZE),
-				 FIL_LOG);
+				 FIL_LOG,
+				 NULL /* no encryption yet */);
 
 		ut_a(fil_validate());
 
@@ -2330,7 +2338,7 @@ innobase_start_or_create_for_mysql(void)
 		/* Create the file space object for archived logs. Under
 		MySQL, no archiving ever done. */
 		fil_space_create("arch_log_space", SRV_LOG_SPACE_FIRST_ID + 1,
-				 0, FIL_LOG);
+			0, FIL_LOG, NULL /* no encryption yet */);
 #endif /* UNIV_LOG_ARCHIVE */
 		log_group_init(0, i, srv_log_file_size * UNIV_PAGE_SIZE,
 			       SRV_LOG_SPACE_FIRST_ID,
@@ -2982,6 +2990,9 @@ files_checked:
 
 		/* Create the thread that will optimize the FTS sub-system. */
 		fts_optimize_init();
+
+		/* Create thread(s) that handles key rotation */
+		fil_crypt_threads_init();
 	}
 
 	/* Initialize online defragmentation. */
@@ -3047,6 +3058,9 @@ innobase_shutdown_for_mysql(void)
 		fts_optimize_start_shutdown();
 
 		fts_optimize_end();
+
+		/* Shutdown key rotation threads */
+		fil_crypt_threads_end();
 	}
 
 	/* 1. Flush the buffer pool to disk, write the current lsn to
@@ -3155,6 +3169,10 @@ innobase_shutdown_for_mysql(void)
 
 	if (!srv_read_only_mode) {
 		dict_stats_thread_deinit();
+	}
+
+	if (!srv_read_only_mode) {
+		fil_crypt_threads_cleanup();
 	}
 
 	/* This must be disabled before closing the buffer pool

@@ -653,7 +653,8 @@ create_log_files(
 	fil_space_create(
 		logfilename, SRV_LOG_SPACE_FIRST_ID,
 		fsp_flags_set_page_size(0, UNIV_PAGE_SIZE),
-		FIL_LOG);
+		FIL_LOG,
+		NULL /* no encryption yet */);
 	ut_a(fil_validate());
 
 	logfile0 = fil_node_create(
@@ -791,6 +792,7 @@ open_or_create_data_files(
 	ulint		space;
 	ulint		rounded_size_pages;
 	char		name[10000];
+	fil_space_crypt_t*    crypt_data;
 
 	if (srv_n_data_files >= 1000) {
 
@@ -1010,7 +1012,7 @@ check_first_page:
 				min_arch_log_no, max_arch_log_no,
 #endif /* UNIV_LOG_ARCHIVE */
 				min_flushed_lsn, max_flushed_lsn,
-				ULINT_UNDEFINED);
+				ULINT_UNDEFINED, &crypt_data);
 
 			if (check_msg) {
 
@@ -1104,6 +1106,8 @@ check_first_page:
 			}
 
 			*sum_of_new_sizes += srv_data_file_sizes[i];
+
+			crypt_data = fil_space_create_crypt_data();
 		}
 
 		ret = os_file_close(files[i]);
@@ -1111,7 +1115,9 @@ check_first_page:
 
 		if (i == 0) {
 			flags = fsp_flags_set_page_size(0, UNIV_PAGE_SIZE);
-			fil_space_create(name, 0, flags, FIL_TABLESPACE);
+			fil_space_create(name, 0, flags, FIL_TABLESPACE,
+					 crypt_data);
+			crypt_data = NULL;
 		}
 
 		ut_a(fil_validate());
@@ -1257,7 +1263,8 @@ srv_undo_tablespace_open(
 
 		/* Set the compressed page size to 0 (non-compressed) */
 		flags = fsp_flags_set_page_size(0, UNIV_PAGE_SIZE);
-		fil_space_create(name, space, flags, FIL_TABLESPACE);
+		fil_space_create(name, space, flags, FIL_TABLESPACE,
+				 NULL /* no encryption */);
 
 		ut_a(fil_validate());
 
@@ -2245,7 +2252,8 @@ innobase_start_or_create_for_mysql(void)
 		fil_space_create(logfilename,
 				 SRV_LOG_SPACE_FIRST_ID,
 				 fsp_flags_set_page_size(0, UNIV_PAGE_SIZE),
-				 FIL_LOG);
+				 FIL_LOG,
+				 NULL /* no encryption yet */);
 
 		ut_a(fil_validate());
 
@@ -2900,6 +2908,9 @@ files_checked:
 
 		/* Create the thread that will optimize the FTS sub-system. */
 		fts_optimize_init();
+
+		/* Create thread(s) that handles key rotation */
+		fil_crypt_threads_init();
 	}
 
 	/* Initialize online defragmentation. */
@@ -2965,6 +2976,9 @@ innobase_shutdown_for_mysql(void)
 		fts_optimize_start_shutdown();
 
 		fts_optimize_end();
+
+		/* Shutdown key rotation threads */
+		fil_crypt_threads_end();
 	}
 
 	/* 1. Flush the buffer pool to disk, write the current lsn to
@@ -3073,6 +3087,10 @@ innobase_shutdown_for_mysql(void)
 
 	if (!srv_read_only_mode) {
 		dict_stats_thread_deinit();
+	}
+
+	if (!srv_read_only_mode) {
+		fil_crypt_threads_cleanup();
 	}
 
 	/* This must be disabled before closing the buffer pool
