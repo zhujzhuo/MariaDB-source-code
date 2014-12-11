@@ -458,7 +458,7 @@ fil_read(
 				actual page size does not decrease. */
 {
 	return(fil_io(OS_FILE_READ, sync, space_id, zip_size, block_offset,
-		      byte_offset, len, buf, message, write_size));
+			byte_offset, len, buf, message, write_size, 0));
 }
 
 /********************************************************************//**
@@ -485,16 +485,17 @@ fil_write(
 				this must be appropriately aligned */
 	void*	message,	/*!< in: message for aio handler if non-sync
 				aio used, else ignored */
-	ulint*	write_size)	/*!< in/out: Actual write size initialized
+	ulint*	write_size,	/*!< in/out: Actual write size initialized
 				after fist successfull trim
 				operation for this page and if
 				initialized we do not trim again if
 				actual page size does not decrease. */
+	lsn_t	lsn)		/* lsn of the newest modification */
 {
 	ut_ad(!srv_read_only_mode);
 
 	return(fil_io(OS_FILE_WRITE, sync, space_id, zip_size, block_offset,
-		      byte_offset, len, buf, message, write_size));
+			byte_offset, len, buf, message, write_size, lsn));
 }
 
 /*******************************************************************//**
@@ -2004,7 +2005,7 @@ fil_write_lsn_and_arch_no_to_file(
 				lsn);
 
 		err = fil_write(TRUE, space, 0, sum_of_sizes, 0,
-				UNIV_PAGE_SIZE, buf, NULL, 0);
+			        UNIV_PAGE_SIZE, buf, NULL, 0, lsn);
 	}
 
 	mem_free(buf1);
@@ -5371,7 +5372,7 @@ retry:
 		success = os_aio(OS_FILE_WRITE, OS_AIO_SYNC,
 				 node->name, node->handle, buf,
 				 offset, page_size * n_pages,
-			         node, NULL, 0, FALSE, 0, 0, 0);
+			         node, NULL, 0, FALSE, 0, 0, 0, 0);
 #endif /* UNIV_HOTBACKUP */
 		if (success) {
 			os_has_said_disk_full = FALSE;
@@ -5747,11 +5748,12 @@ fil_io(
 				appropriately aligned */
 	void*	message,	/*!< in: message for aio handler if non-sync
 				aio used, else ignored */
-	ulint*	write_size)	/*!< in/out: Actual write size initialized
+	ulint*	write_size,	/*!< in/out: Actual write size initialized
 				after fist successfull trim
 				operation for this page and if
 				initialized we do not trim again if
 				actual page size does not decrease. */
+	lsn_t	lsn)		/* lsn of the newest modification */
 {
 	ulint		mode;
 	fil_space_t*	space;
@@ -5978,7 +5980,8 @@ fil_io(
 		page_compressed,
 		page_compression_level,
 		page_encrypted,
-		page_encryption_key);
+		page_encryption_key,
+		lsn);
 
 #endif /* UNIV_HOTBACKUP */
 
