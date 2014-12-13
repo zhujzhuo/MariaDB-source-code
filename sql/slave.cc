@@ -1019,8 +1019,7 @@ static bool io_slave_killed(Master_info* mi)
    In the event of deffering decision @rli->last_event_start_time waiting
    timer is set to force the killed status be accepted upon its expiration.
 
-   @param thd   pointer to a THD instance
-   @param rli   pointer to Relay_log_info instance
+   @param rgi   pointer to relay_group_info instance
 
    @return TRUE the killed status is recognized, FALSE a possible killed
            status is deferred.

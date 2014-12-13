@@ -135,7 +135,6 @@ my $opt_start;
 my $opt_start_dirty;
 my $opt_start_exit;
 my $start_only;
-my $file_wsrep_provider;
 
 our @global_suppressions;
 

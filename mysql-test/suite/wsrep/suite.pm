@@ -31,6 +31,7 @@ push @::global_suppressions,
      qr(WSREP: last inactive check more than .* skipping check),
      qr(WSREP: Gap in state sequence. Need state transfer.),
      qr(WSREP: Failed to prepare for incremental state transfer: .*),
+     qr(WSREP: SQL statement was ineffective, THD: ),
    );
 
 

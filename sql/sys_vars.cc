@@ -4481,7 +4481,7 @@ static Sys_var_charptr Sys_wsrep_provider_options(
 static Sys_var_charptr Sys_wsrep_data_home_dir(
        "wsrep_data_home_dir", "home directory for wsrep provider",
        READ_ONLY GLOBAL_VAR(wsrep_data_home_dir), CMD_LINE(REQUIRED_ARG),
-       IN_FS_CHARSET, DEFAULT(""));
+       IN_FS_CHARSET, DEFAULT(mysql_real_data_home));
 
 static Sys_var_charptr Sys_wsrep_cluster_name(
        "wsrep_cluster_name", "Name for the cluster",
@@ -4504,7 +4504,7 @@ static Sys_var_charptr Sys_wsrep_cluster_address (
 static Sys_var_charptr Sys_wsrep_node_name (
        "wsrep_node_name", "Node name",
        PREALLOCATED GLOBAL_VAR(wsrep_node_name), CMD_LINE(REQUIRED_ARG),
-       IN_SYSTEM_CHARSET, DEFAULT(""), NO_MUTEX_GUARD, NOT_IN_BINLOG,
+       IN_SYSTEM_CHARSET, DEFAULT(glob_hostname), NO_MUTEX_GUARD, NOT_IN_BINLOG,
        wsrep_node_name_check, wsrep_node_name_update);
 
 static Sys_var_charptr Sys_wsrep_node_address (
