@@ -1470,7 +1470,11 @@ public:
     DBUG_ASSERT(m_flags == 0);
     DBUG_ASSERT(m_ht == NULL);
     DBUG_ASSERT(m_next == NULL);
+    DBUG_ASSERT(ht_arg);
 
+#ifndef DBUG_OFF
+    m_trans= trans;
+#endif
     m_ht= ht_arg;
     m_flags= (int) TRX_READ_ONLY; /* Assume read-only at start. */
 
@@ -1481,12 +1485,11 @@ public:
   /** Clear, prepare for reuse. */
   void reset()
   {
-    m_next= NULL;
-    m_ht= NULL;
-    m_flags= 0;
+    DBUG_ASSERT(!m_trans || m_trans->ha_list != this);
+    bzero(this, sizeof(*this));
   }
 
-  Ha_trx_info() { reset(); }
+  Ha_trx_info() { bzero(this, sizeof(*this)); };
 
   void set_trx_read_write()
   {
@@ -1537,6 +1540,9 @@ private:
     May assume a combination of enum values above.
   */
   uchar       m_flags;
+#ifndef DBUG_OFF
+  THD_TRANS *m_trans;
+#endif
 };
 
 

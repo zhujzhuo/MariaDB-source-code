@@ -1553,6 +1553,7 @@ commit_one_phase_2(THD *thd, bool all, THD_TRANS *trans, bool is_real_trans)
     DEBUG_SYNC(thd, "commit_one_phase_2");
   if (ha_info)
   {
+    trans->ha_list= 0;
     for (; ha_info; ha_info= ha_info_next)
     {
       int err;
@@ -1567,7 +1568,6 @@ commit_one_phase_2(THD *thd, bool all, THD_TRANS *trans, bool is_real_trans)
       ha_info_next= ha_info->next();
       ha_info->reset(); /* keep it conveniently zero-filled */
     }
-    trans->ha_list= 0;
     trans->no_2pc=0;
     if (all)
     {
@@ -1633,6 +1633,7 @@ int ha_rollback_trans(THD *thd, bool all)
     if (is_real_trans)                          /* not a statement commit */
       thd->stmt_map.close_transient_cursors();
 
+    trans->ha_list= 0;
     for (; ha_info; ha_info= ha_info_next)
     {
       int err;
@@ -1646,7 +1647,6 @@ int ha_rollback_trans(THD *thd, bool all)
       ha_info_next= ha_info->next();
       ha_info->reset(); /* keep it conveniently zero-filled */
     }
-    trans->ha_list= 0;
     trans->no_2pc=0;
   }
 
@@ -2092,8 +2092,9 @@ int ha_rollback_to_savepoint(THD *thd, SAVEPOINT *sv)
     rolling back the transaction in all storage engines that were not part of
     the transaction when the savepoint was set
   */
-  for (ha_info= trans->ha_list; ha_info != sv->ha_list;
-       ha_info= ha_info_next)
+  ha_info= trans->ha_list;
+  trans->ha_list= sv->ha_list;
+  for (; ha_info != sv->ha_list; ha_info= ha_info_next)
   {
     int err;
     handlerton *ht= ha_info->ht();
@@ -2106,7 +2107,6 @@ int ha_rollback_to_savepoint(THD *thd, SAVEPOINT *sv)
     ha_info_next= ha_info->next();
     ha_info->reset(); /* keep it conveniently zero-filled */
   }
-  trans->ha_list= sv->ha_list;
   DBUG_RETURN(error);
 }
 
@@ -6061,6 +6061,7 @@ int ha_abort_transaction(THD *bf_thd, THD *victim_thd, my_bool signal)
   THD_TRANS *trans= &victim_thd->transaction.all;
   Ha_trx_info *ha_info= trans->ha_list, *ha_info_next;
 
+  trans->ha_list= 0;
   for (; ha_info; ha_info= ha_info_next)
   {
     handlerton *hton= ha_info->ht();
@@ -6071,7 +6072,6 @@ int ha_abort_transaction(THD *bf_thd, THD *victim_thd, my_bool signal)
     ha_info_next= ha_info->next();
     ha_info->reset(); /* keep it conveniently zero-filled */
   }
-  trans->ha_list= 0;
   DBUG_RETURN(0);
 }
 
