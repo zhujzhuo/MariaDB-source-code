@@ -6071,6 +6071,7 @@ int ha_abort_transaction(THD *bf_thd, THD *victim_thd, my_bool signal)
     ha_info_next= ha_info->next();
     ha_info->reset(); /* keep it conveniently zero-filled */
   }
+  trans->ha_list= 0;
   DBUG_RETURN(0);
 }
 
