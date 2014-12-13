@@ -42,3 +42,8 @@ SELECT COUNT(DISTINCT f1) = 22 FROM t1;
 COUNT(DISTINCT f1) = 22
 1
 DROP TABLE t1;
+select variable_name, session_value, global_value, global_value_origin from
+information_schema.system_variables where variable_name like 'auto_increment%';
+variable_name	session_value	global_value	global_value_origin
+AUTO_INCREMENT_OFFSET	1	1	AUTO
+AUTO_INCREMENT_INCREMENT	2	2	AUTO

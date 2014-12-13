@@ -344,6 +344,7 @@ static Sys_var_ulong Sys_auto_increment_increment(
        CMD_LINE(OPT_ARG),
        VALID_RANGE(1, 65535), DEFAULT(1), BLOCK_SIZE(1),
        NO_MUTEX_GUARD, IN_BINLOG);
+export sys_var *Sys_autoinc_increment_ptr= &Sys_auto_increment_increment; // for wsrep_mysqld.cc
 
 static Sys_var_ulong Sys_auto_increment_offset(
        "auto_increment_offset",
@@ -353,6 +354,7 @@ static Sys_var_ulong Sys_auto_increment_offset(
        CMD_LINE(OPT_ARG),
        VALID_RANGE(1, 65535), DEFAULT(1), BLOCK_SIZE(1),
        NO_MUTEX_GUARD, IN_BINLOG);
+export sys_var *Sys_autoinc_offset_ptr= &Sys_auto_increment_offset; // for wsrep_mysqld.cc
 
 static Sys_var_mybool Sys_automatic_sp_privileges(
        "automatic_sp_privileges",

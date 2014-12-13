@@ -54,3 +54,8 @@ SELECT COUNT(*) = 22 FROM t1;
 SELECT COUNT(DISTINCT f1) = 22 FROM t1;
 
 DROP TABLE t1;
+
+# verify that when galera updates autoinc variables,
+# the value_origin is set to AUTO
+select variable_name, session_value, global_value, global_value_origin from
+information_schema.system_variables where variable_name like 'auto_increment%';

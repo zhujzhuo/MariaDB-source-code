@@ -456,6 +456,10 @@ wsrep_view_handler_cb (void*                    app_ctx,
 
   if (wsrep_auto_increment_control)
   {
+    extern sys_var *Sys_autoinc_offset_ptr;
+    extern sys_var *Sys_autoinc_increment_ptr;
+    Sys_autoinc_increment_ptr->value_origin= sys_var::AUTO;
+    Sys_autoinc_offset_ptr->value_origin= sys_var::AUTO;
     global_system_variables.auto_increment_offset= view->my_idx + 1;
     global_system_variables.auto_increment_increment= view->memb_num;
   }
