@@ -8316,7 +8316,7 @@ int TC_LOG_MMAP::open(const char *opt_name)
                                O_RDWR, MYF(MY_WME))) < 0)
       goto err;
     inited=1;
-    file_length= opt_tc_log_size;
+    file_length= MY_MAX(tc_log_page_size * 2 * 3, opt_tc_log_size);
     if (mysql_file_chsize(fd, file_length, 0, MYF(MY_WME)))
       goto err;
   }
